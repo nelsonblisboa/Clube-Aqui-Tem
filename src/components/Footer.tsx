@@ -46,19 +46,23 @@ const Footer = () => {
             <ul className="space-y-3 text-sm text-primary-foreground/80">
               <li className="flex items-center gap-2">
                 <Mail size={16} className="text-accent" />
-                <a href="mailto:contato@clubeaquitem.com" className="hover:text-accent transition-colors">
-                  contato@clubeaquitem.com
+                <a href="mailto:clubeaquitem.comercial@gmail.com" className="hover:text-accent transition-colors">
+                  clubeaquitem.comercial@gmail.com
                 </a>
               </li>
               <li className="flex items-center gap-2">
                 <Phone size={16} className="text-accent" />
-                <a href="tel:+5511999999999" className="hover:text-accent transition-colors">
-                  (11) 99999-9999
+                <a href="tel:+5521964168479" className="hover:text-accent transition-colors">
+                  (21) 96416-8479
                 </a>
               </li>
               <li className="flex items-center gap-2">
                 <MapPin size={16} className="text-accent" />
-                <span>São Paulo, SP</span>
+                <span>Nova Iguaçu - RJ</span>
+              </li>
+              <li className="text-xs">
+                Rua Padre Aloisio Rucha, 75 - Loja 13<br />
+                Comendador Soares
               </li>
             </ul>
           </div>
@@ -71,14 +75,11 @@ const Footer = () => {
               © 2025 Clube Aqui Tem. Todos os direitos reservados.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="text-primary-foreground hover:text-accent transition-colors">
+              <a href="https://www.facebook.com/clubeaquitem" target="_blank" rel="noopener noreferrer" className="text-primary-foreground hover:text-accent transition-colors" aria-label="Facebook">
                 <Facebook size={24} />
               </a>
-              <a href="#" className="text-primary-foreground hover:text-accent transition-colors">
+              <a href="https://www.instagram.com/clubeaquitem" target="_blank" rel="noopener noreferrer" className="text-primary-foreground hover:text-accent transition-colors" aria-label="Instagram">
                 <Instagram size={24} />
-              </a>
-              <a href="#" className="text-primary-foreground hover:text-accent transition-colors">
-                <Twitter size={24} />
               </a>
             </div>
           </div>
