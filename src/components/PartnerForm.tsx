@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Store } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const PartnerForm = () => {
   const { toast } = useToast();
@@ -16,19 +17,35 @@ const PartnerForm = () => {
     endereco: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Cadastro Recebido!",
-      description: "Entraremos em contato em breve para confirmar sua parceria.",
-    });
-    setFormData({
-      estabelecimento: "",
-      responsavel: "",
-      telefone: "",
-      email: "",
-      endereco: "",
-    });
+    
+    try {
+      const { error } = await supabase
+        .from('partners')
+        .insert([formData]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Cadastro Recebido!",
+        description: "Entraremos em contato em breve para confirmar sua parceria.",
+      });
+      
+      setFormData({
+        estabelecimento: "",
+        responsavel: "",
+        telefone: "",
+        email: "",
+        endereco: "",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro no cadastro",
+        description: "Ocorreu um erro ao enviar seu cadastro. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

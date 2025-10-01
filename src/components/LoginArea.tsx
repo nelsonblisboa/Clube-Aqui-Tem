@@ -1,32 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { LogIn } from "lucide-react";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const LoginArea = () => {
-  const { toast } = useToast();
-  const [credentials, setCredentials] = useState({
-    email: "",
-    senha: "",
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Login em desenvolvimento",
-      description: "Esta funcionalidade estará disponível em breve!",
-    });
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCredentials({
-      ...credentials,
-      [e.target.id]: e.target.value,
-    });
-  };
+  const navigate = useNavigate();
 
   return (
     <section id="login" className="py-16 md:py-24 bg-background">
@@ -45,38 +23,20 @@ const LoginArea = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={credentials.email}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="senha">Senha</Label>
-                  <Input
-                    id="senha"
-                    type="password"
-                    placeholder="••••••••"
-                    value={credentials.senha}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                <Button variant="default" size="lg" type="submit" className="w-full text-lg">
-                  Entrar
+              <div className="space-y-6">
+                <p className="text-center text-muted-foreground">
+                  Cadastre-se para acessar cupons e benefícios exclusivos do Clube Aqui Tem
+                </p>
+                <Button 
+                  variant="default" 
+                  size="lg" 
+                  onClick={() => navigate("/login")}
+                  className="w-full text-lg"
+                >
+                  <LogIn className="mr-2 h-5 w-5" />
+                  Acessar Área do Associado
                 </Button>
-                <div className="text-center">
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    Esqueci minha senha
-                  </a>
-                </div>
-              </form>
+              </div>
             </CardContent>
           </Card>
         </div>
