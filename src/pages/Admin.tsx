@@ -40,6 +40,24 @@ const Admin = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate("/login");
+      return;
+    }
+
+    // Check if user has admin role
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .eq('role', 'admin')
+      .single();
+
+    if (!roles) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar o painel administrativo.",
+        variant: "destructive",
+      });
+      navigate("/");
     }
   };
 
@@ -50,12 +68,20 @@ const Admin = () => {
         supabase.from('profiles').select('*').order('created_at', { ascending: false })
       ]);
 
+      if (partnersResult.error) {
+        throw new Error(partnersResult.error.message);
+      }
+      if (profilesResult.error) {
+        throw new Error(profilesResult.error.message);
+      }
+
       if (partnersResult.data) setPartners(partnersResult.data);
       if (profilesResult.data) setProfiles(profilesResult.data);
     } catch (error) {
+      console.error('Error fetching data:', error);
       toast({
         title: "Erro ao carregar dados",
-        description: "Não foi possível carregar os dados.",
+        description: "Você não tem permissão para visualizar estes dados ou ocorreu um erro.",
         variant: "destructive",
       });
     } finally {
