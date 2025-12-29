@@ -8,11 +8,14 @@ const Footer = () => {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Logo e Descrição */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <img src={logo} alt="Clube Aqui Tem" className="w-10 h-10 object-contain" />
-              <span className="text-xl font-bold">Clube Aqui Tem</span>
+            <div className="flex items-center gap-3">
+              <img src={logo} alt="Clube Aqui Tem" className="w-12 h-12 object-contain" />
+              <div className="flex flex-col leading-tight">
+                <span className="text-xl font-brand font-extrabold text-primary-foreground tracking-tight">Clube</span>
+                <span className="text-lg font-brand font-bold text-accent -mt-1">Aqui Tem</span>
+              </div>
             </div>
-            <p className="text-sm text-primary-foreground/80">
+            <p className="text-sm text-primary-foreground/80 font-body">
               Seu clube de vantagens e benefícios. Economize todos os dias com descontos exclusivos.
             </p>
           </div>
