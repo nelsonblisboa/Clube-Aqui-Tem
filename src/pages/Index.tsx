@@ -1,5 +1,7 @@
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
+import HowItWorks from "@/components/HowItWorks";
+import SavingsCounter from "@/components/SavingsCounter";
 import Benefits from "@/components/Benefits";
 import PartnerForm from "@/components/PartnerForm";
 import LoginArea from "@/components/LoginArea";
@@ -12,6 +14,8 @@ const Index = () => {
       <Header />
       <main>
         <Hero />
+        <HowItWorks />
+        <SavingsCounter />
         <Benefits />
         <PartnerForm />
         <LoginArea />
