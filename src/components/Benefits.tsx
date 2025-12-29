@@ -42,14 +42,20 @@ const benefits = [
 
 const Benefits = () => {
   return (
-    <section id="beneficios" className="py-16 md:py-24 bg-background">
-      <div className="container mx-auto px-4">
+    <section id="beneficios" className="py-16 md:py-24 bg-background relative">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+      <div className="absolute top-1/4 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+      
+      <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-12 animate-fade-in-up">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary mb-4">
+          <div className="accent-bar mx-auto mb-6"></div>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-brand font-extrabold text-primary mb-4">
             Benefícios para Associados
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Por apenas R$19,99/mês, tenha acesso a todos esses benefícios exclusivos
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-body">
+            Por apenas <span className="text-accent font-bold">R$19,99/mês</span>, tenha acesso a todos esses benefícios exclusivos
           </p>
         </div>
 
@@ -57,17 +63,17 @@ const Benefits = () => {
           {benefits.map((benefit, index) => (
             <Card 
               key={index} 
-              className="bg-gradient-card shadow-card hover:shadow-card-hover transition-all duration-300 hover:scale-105 animate-fade-in-up border-border"
+              className="bg-gradient-card shadow-card hover:shadow-card-hover transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fade-in-up border-border group"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <CardHeader>
-                <div className={`w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-4 ${benefit.color}`}>
-                  <benefit.icon size={24} />
+                <div className={`w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mb-4 ${benefit.color} group-hover:scale-110 transition-transform duration-300`}>
+                  <benefit.icon size={28} />
                 </div>
-                <CardTitle className="text-xl text-foreground">{benefit.title}</CardTitle>
+                <CardTitle className="text-xl text-foreground font-brand">{benefit.title}</CardTitle>
               </CardHeader>
               <CardContent>
-                <CardDescription className="text-muted-foreground">{benefit.description}</CardDescription>
+                <CardDescription className="text-muted-foreground font-body">{benefit.description}</CardDescription>
               </CardContent>
             </Card>
           ))}

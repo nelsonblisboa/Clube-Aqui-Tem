@@ -44,11 +44,14 @@ All colors MUST be HSL.
     --brand-orange: 29 100% 50%;
     --brand-orange-light: 29 100% 95%;
     
-    --gradient-hero: linear-gradient(135deg, hsl(142 40% 92%) 0%, hsl(142 30% 96%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(142 40% 92%) 0%, hsl(142 30% 96%) 50%, hsl(29 100% 98%) 100%);
     --gradient-card: linear-gradient(to bottom, hsl(0 0% 100%) 0%, hsl(142 20% 98%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(29 100% 50%) 0%, hsl(29 100% 60%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(142 65% 28%) 0%, hsl(142 65% 35%) 100%);
     
     --shadow-card: 0 4px 6px -1px hsl(142 65% 28% / 0.1), 0 2px 4px -1px hsl(142 65% 28% / 0.06);
-    --shadow-card-hover: 0 10px 15px -3px hsl(142 65% 28% / 0.1), 0 4px 6px -2px hsl(142 65% 28% / 0.05);
+    --shadow-card-hover: 0 10px 15px -3px hsl(142 65% 28% / 0.15), 0 4px 6px -2px hsl(29 100% 50% / 0.1);
+    --shadow-accent: 0 4px 14px -3px hsl(29 100% 50% / 0.4);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -60,6 +63,39 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-brand;
+  }
+}
+
+@layer components {
+  .brand-text {
+    @apply font-brand font-bold tracking-tight;
+    background: linear-gradient(135deg, hsl(142 65% 28%) 0%, hsl(142 65% 35%) 60%, hsl(29 100% 50%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .accent-bar {
+    @apply h-1 w-16 rounded-full;
+    background: linear-gradient(90deg, hsl(142 65% 28%) 0%, hsl(29 100% 50%) 100%);
+  }
+
+  .card-accent-border {
+    @apply border-l-4 border-l-accent;
+  }
+
+  .section-divider {
+    @apply relative;
+  }
+
+  .section-divider::before {
+    content: '';
+    @apply absolute left-1/2 -translate-x-1/2 w-24 h-1 rounded-full -top-4;
+    background: linear-gradient(90deg, hsl(142 65% 28%) 0%, hsl(29 100% 50%) 100%);
   }
 }
