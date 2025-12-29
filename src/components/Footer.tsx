@@ -1,4 +1,5 @@
-import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from "lucide-react";
+import { Facebook, Instagram, Mail, Phone, MapPin } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const Footer = () => {
   return (
@@ -8,9 +9,7 @@ const Footer = () => {
           {/* Logo e Descrição */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
-                <span className="text-xl font-bold text-accent-foreground">AT</span>
-              </div>
+              <img src={logo} alt="Clube Aqui Tem" className="w-10 h-10 object-contain" />
               <span className="text-xl font-bold">Clube Aqui Tem</span>
             </div>
             <p className="text-sm text-primary-foreground/80">
