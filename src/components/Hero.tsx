@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-image.jpg";
 
 const Hero = () => {
@@ -26,9 +27,11 @@ const Hero = () => {
               Por apenas <span className="font-bold text-accent text-2xl">R$19,99/mês</span> você garante descontos exclusivos, serviços de saúde e assistência.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button variant="hero" size="lg" className="text-lg shadow-accent">
-                Quero ser Associado
-              </Button>
+              <Link to="/associar">
+                <Button variant="hero" size="lg" className="text-lg shadow-accent">
+                  Quero ser Associado
+                </Button>
+              </Link>
               <Button variant="outline" size="lg" className="text-lg border-primary text-primary hover:bg-primary hover:text-primary-foreground">
                 Saiba Mais
               </Button>
