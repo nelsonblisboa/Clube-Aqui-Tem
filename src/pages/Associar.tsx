@@ -1,16 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Shield, CreditCard, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Shield, CreditCard, CheckCircle, Loader2, Gift, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import { z } from "zod";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const associadoSchema = z.object({
   nome_completo: z.string().trim().min(3, "Nome deve ter pelo menos 3 caracteres").max(100, "Nome muito longo"),
@@ -24,6 +31,9 @@ const Associar = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showExitPopup, setShowExitPopup] = useState(false);
+  const [discountApplied, setDiscountApplied] = useState(false);
+  const hasShownPopup = useRef(false);
   const [formData, setFormData] = useState({
     nome_completo: "",
     telefone: "",
@@ -32,6 +42,45 @@ const Associar = () => {
     cpf: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Check if form is empty
+  const isFormEmpty = () => {
+    return !formData.nome_completo && !formData.telefone && !formData.email && !formData.endereco && !formData.cpf;
+  };
+
+  // Exit intent detection
+  useEffect(() => {
+    const handleMouseLeave = (e: MouseEvent) => {
+      if (e.clientY <= 0 && !hasShownPopup.current && !discountApplied) {
+        setShowExitPopup(true);
+        hasShownPopup.current = true;
+      }
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isFormEmpty() && !discountApplied) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    document.addEventListener("mouseleave", handleMouseLeave);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener("mouseleave", handleMouseLeave);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [discountApplied]);
+
+  const handleApplyDiscount = () => {
+    setDiscountApplied(true);
+    setShowExitPopup(false);
+    toast({
+      title: "🎉 Desconto aplicado!",
+      description: "Você ganhou 5% de desconto! Novo valor: R$18,99/mês",
+    });
+  };
 
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, "");
@@ -81,6 +130,7 @@ const Associar = () => {
             address: validatedData.endereco,
             cpf: validatedData.cpf.replace(/\D/g, ""),
           },
+          discountApplied,
         },
       });
 
@@ -167,8 +217,20 @@ const Associar = () => {
 
             <CardContent className="pt-6">
               {/* Benefits reminder */}
+              {discountApplied && (
+                <div className="bg-green-500/10 rounded-xl p-4 mb-4 border border-green-500/30 flex items-center gap-3">
+                  <Gift className="w-6 h-6 text-green-600" />
+                  <div>
+                    <p className="font-semibold text-green-700">🎉 Desconto de 5% aplicado!</p>
+                    <p className="text-sm text-green-600">De <s>R$19,99</s> por apenas <strong>R$18,99/mês</strong></p>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-accent/10 rounded-xl p-4 mb-6 border border-accent/20">
-                <h4 className="font-brand font-semibold text-accent mb-2">Por apenas R$19,99/mês você terá:</h4>
+                <h4 className="font-brand font-semibold text-accent mb-2">
+                  Por apenas {discountApplied ? "R$18,99" : "R$19,99"}/mês você terá:
+                </h4>
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-accent" />
@@ -296,7 +358,7 @@ const Associar = () => {
                   ) : (
                     <>
                       <CreditCard className="w-5 h-5 mr-2" />
-                      Ir para Pagamento - R$19,99/mês
+                      Ir para Pagamento - {discountApplied ? "R$18,99" : "R$19,99"}/mês
                     </>
                   )}
                 </Button>
@@ -311,6 +373,52 @@ const Associar = () => {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Exit Intent Popup */}
+        <Dialog open={showExitPopup} onOpenChange={setShowExitPopup}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader className="text-center">
+              <div className="w-20 h-20 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Gift className="w-10 h-10 text-accent" />
+              </div>
+              <DialogTitle className="text-2xl font-brand text-center">
+                Espere! Temos uma oferta especial 🎁
+              </DialogTitle>
+              <DialogDescription className="text-center text-base pt-2">
+                Não vá embora ainda! Complete seu cadastro agora e ganhe <span className="font-bold text-accent">5% de desconto</span> no primeiro mês!
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="bg-gradient-to-br from-accent/10 to-primary/10 rounded-xl p-6 text-center my-4">
+              <p className="text-muted-foreground mb-2">De <s className="text-lg">R$19,99/mês</s></p>
+              <p className="text-3xl font-brand font-bold text-accent">R$18,99/mês</p>
+              <p className="text-sm text-muted-foreground mt-2">Economia de R$1,00 por mês!</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Button 
+                variant="hero" 
+                size="lg" 
+                className="w-full"
+                onClick={handleApplyDiscount}
+              >
+                <Gift className="w-5 h-5 mr-2" />
+                Quero meu desconto de 5%!
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="text-muted-foreground"
+                onClick={() => setShowExitPopup(false)}
+              >
+                Não, obrigado
+              </Button>
+            </div>
+
+            <p className="text-xs text-center text-muted-foreground mt-2">
+              ⏰ Oferta válida apenas agora!
+            </p>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

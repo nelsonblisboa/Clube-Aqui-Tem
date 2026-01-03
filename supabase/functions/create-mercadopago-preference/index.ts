@@ -15,6 +15,7 @@ interface PayerInfo {
 
 interface RequestBody {
   payer: PayerInfo;
+  discountApplied?: boolean;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -31,9 +32,13 @@ serve(async (req: Request): Promise<Response> => {
       throw new Error("Configuração de pagamento não encontrada");
     }
 
-    const { payer }: RequestBody = await req.json();
+    const { payer, discountApplied }: RequestBody = await req.json();
 
-    console.log("Creating preference for payer:", payer.email);
+    // Calculate price with discount
+    const basePrice = 19.99;
+    const finalPrice = discountApplied ? 18.99 : basePrice;
+
+    console.log("Creating preference for payer:", payer.email, "with discount:", discountApplied);
 
     // Parse phone number
     const phoneNumbers = payer.phone.replace(/\D/g, "");
@@ -45,11 +50,13 @@ serve(async (req: Request): Promise<Response> => {
       items: [
         {
           id: "clube-aqui-tem-mensal",
-          title: "Clube Aqui Tem - Assinatura Mensal",
+          title: discountApplied 
+            ? "Clube Aqui Tem - Assinatura Mensal (5% OFF)" 
+            : "Clube Aqui Tem - Assinatura Mensal",
           description: "Acesso a descontos exclusivos, telemedicina e assistências",
           quantity: 1,
           currency_id: "BRL",
-          unit_price: 19.99,
+          unit_price: finalPrice,
         },
       ],
       payer: {

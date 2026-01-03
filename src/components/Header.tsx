@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
 
 const Header = () => {
@@ -41,9 +42,11 @@ const Header = () => {
             <button onClick={() => scrollToSection("login")} className="text-foreground hover:text-primary transition-colors">
               Login Associado
             </button>
-            <Button variant="hero" size="lg" onClick={() => scrollToSection("inicio")}>
-              Seja Associado por R$19,99/mês
-            </Button>
+            <Link to="/associar">
+              <Button variant="hero" size="lg">
+                Seja Associado por R$19,99/mês
+              </Button>
+            </Link>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -70,9 +73,11 @@ const Header = () => {
             <button onClick={() => scrollToSection("login")} className="text-foreground hover:text-primary transition-colors text-left">
               Login Associado
             </button>
-            <Button variant="hero" size="lg" className="w-full" onClick={() => scrollToSection("inicio")}>
-              Seja Associado por R$19,99/mês
-            </Button>
+            <Link to="/associar">
+              <Button variant="hero" size="lg" className="w-full">
+                Seja Associado por R$19,99/mês
+              </Button>
+            </Link>
           </nav>
         )}
       </div>
