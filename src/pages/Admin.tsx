@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Users, Store } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { LogOut, Users, Store, CreditCard, CheckCircle, Clock, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Partner {
@@ -18,9 +19,16 @@ interface Partner {
   created_at: string;
 }
 
-interface Profile {
+interface Subscriber {
   id: string;
+  name: string;
   email: string;
+  phone: string;
+  cpf: string;
+  address: string;
+  status: string;
+  discount_applied: boolean;
+  paid_at: string | null;
   created_at: string;
 }
 
@@ -28,7 +36,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [partners, setPartners] = useState<Partner[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,20 +71,20 @@ const Admin = () => {
 
   const fetchData = async () => {
     try {
-      const [partnersResult, profilesResult] = await Promise.all([
+      const [partnersResult, subscribersResult] = await Promise.all([
         supabase.from('partners').select('*').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('*').order('created_at', { ascending: false })
+        supabase.from('subscribers').select('*').order('created_at', { ascending: false })
       ]);
 
       if (partnersResult.error) {
         throw new Error(partnersResult.error.message);
       }
-      if (profilesResult.error) {
-        throw new Error(profilesResult.error.message);
+      if (subscribersResult.error) {
+        throw new Error(subscribersResult.error.message);
       }
 
       if (partnersResult.data) setPartners(partnersResult.data);
-      if (profilesResult.data) setProfiles(profilesResult.data);
+      if (subscribersResult.data) setSubscribers(subscribersResult.data);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -104,6 +112,54 @@ const Admin = () => {
     });
   };
 
+  const formatCPF = (cpf: string) => {
+    if (cpf.length === 11) {
+      return `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9)}`;
+    }
+    return cpf;
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return (
+          <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Aprovado
+          </Badge>
+        );
+      case 'pending':
+        return (
+          <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+            <Clock className="w-3 h-3 mr-1" />
+            Pendente
+          </Badge>
+        );
+      case 'rejected':
+        return (
+          <Badge className="bg-red-500/10 text-red-600 border-red-500/30">
+            <XCircle className="w-3 h-3 mr-1" />
+            Rejeitado
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="secondary">
+            {status}
+          </Badge>
+        );
+    }
+  };
+
+  const getStatusCounts = () => {
+    const approved = subscribers.filter(s => s.status === 'approved').length;
+    const pending = subscribers.filter(s => s.status === 'pending').length;
+    const rejected = subscribers.filter(s => s.status === 'rejected').length;
+    return { approved, pending, rejected };
+  };
+
+  const statusCounts = getStatusCounts();
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -123,17 +179,134 @@ const Admin = () => {
           </Button>
         </div>
 
-        <Tabs defaultValue="partners" className="w-full">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Users className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Associados</p>
+                  <p className="text-2xl font-bold">{subscribers.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Pagos</p>
+                  <p className="text-2xl font-bold text-green-600">{statusCounts.approved}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Pendentes</p>
+                  <p className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center">
+                  <Store className="w-6 h-6 text-accent" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Parceiros</p>
+                  <p className="text-2xl font-bold">{partners.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="subscribers" className="w-full">
           <TabsList className="grid w-full md:w-[400px] grid-cols-2">
+            <TabsTrigger value="subscribers">
+              <CreditCard className="mr-2 h-4 w-4" />
+              Associados
+            </TabsTrigger>
             <TabsTrigger value="partners">
               <Store className="mr-2 h-4 w-4" />
               Parceiros
             </TabsTrigger>
-            <TabsTrigger value="associates">
-              <Users className="mr-2 h-4 w-4" />
-              Associados
-            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="subscribers" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Associados e Status de Pagamento</CardTitle>
+                <CardDescription>
+                  Total de {subscribers.length} associado(s) cadastrado(s)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>CPF</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Telefone</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Desconto</TableHead>
+                        <TableHead>Data Pagamento</TableHead>
+                        <TableHead>Cadastro</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {subscribers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center text-muted-foreground">
+                            Nenhum associado cadastrado ainda
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        subscribers.map((subscriber) => (
+                          <TableRow key={subscriber.id}>
+                            <TableCell className="font-medium">{subscriber.name}</TableCell>
+                            <TableCell>{formatCPF(subscriber.cpf)}</TableCell>
+                            <TableCell>{subscriber.email}</TableCell>
+                            <TableCell>{subscriber.phone}</TableCell>
+                            <TableCell>{getStatusBadge(subscriber.status)}</TableCell>
+                            <TableCell>
+                              {subscriber.discount_applied ? (
+                                <Badge variant="secondary" className="bg-accent/10 text-accent">
+                                  5% aplicado
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {subscriber.paid_at ? formatDate(subscriber.paid_at) : '-'}
+                            </TableCell>
+                            <TableCell>{formatDate(subscriber.created_at)}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="partners" className="mt-6">
             <Card>
@@ -172,45 +345,6 @@ const Admin = () => {
                             <TableCell>{partner.email}</TableCell>
                             <TableCell>{partner.endereco}</TableCell>
                             <TableCell>{formatDate(partner.created_at)}</TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="associates" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Associados Cadastrados</CardTitle>
-                <CardDescription>
-                  Total de {profiles.length} associado(s) cadastrado(s)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Data de Cadastro</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {profiles.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={2} className="text-center text-muted-foreground">
-                            Nenhum associado cadastrado ainda
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        profiles.map((profile) => (
-                          <TableRow key={profile.id}>
-                            <TableCell className="font-medium">{profile.email}</TableCell>
-                            <TableCell>{formatDate(profile.created_at)}</TableCell>
                           </TableRow>
                         ))
                       )}

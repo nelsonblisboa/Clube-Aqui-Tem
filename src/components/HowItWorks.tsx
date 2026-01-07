@@ -14,8 +14,8 @@ const steps = [
     number: "02",
     icon: CreditCard,
     title: "Assine por R$19,99/mês",
-    description: "Investimento menor que um lanche! Cancele quando quiser.",
-    highlight: "Sem Fidelidade",
+    description: "Investimento menor que um lanche! Pagamento mensal com contrato de 12 meses.",
+    highlight: "Fidelidade 12 meses",
     trigger: "Economia garantida desde o primeiro cupom!"
   },
   {
