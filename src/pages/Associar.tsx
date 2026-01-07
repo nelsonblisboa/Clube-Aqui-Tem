@@ -119,6 +119,26 @@ const Associar = () => {
     try {
       // Validate form data
       const validatedData = associadoSchema.parse(formData);
+      const cpfClean = validatedData.cpf.replace(/\D/g, "");
+
+      // First, save subscriber to database
+      const { error: dbError } = await supabase
+        .from("subscribers")
+        .insert({
+          name: validatedData.nome_completo,
+          email: validatedData.email,
+          phone: validatedData.telefone,
+          address: validatedData.endereco,
+          cpf: cpfClean,
+          discount_applied: discountApplied,
+        });
+
+      if (dbError) {
+        if (dbError.code === "23505") {
+          throw new Error("Este CPF já está cadastrado");
+        }
+        throw new Error("Erro ao salvar dados");
+      }
 
       // Call edge function to create Mercado Pago preference
       const { data, error } = await supabase.functions.invoke("create-mercadopago-preference", {
@@ -128,7 +148,7 @@ const Associar = () => {
             email: validatedData.email,
             phone: validatedData.telefone,
             address: validatedData.endereco,
-            cpf: validatedData.cpf.replace(/\D/g, ""),
+            cpf: cpfClean,
           },
           discountApplied,
         },
@@ -139,6 +159,17 @@ const Associar = () => {
       }
 
       if (data?.init_point) {
+        // Update subscriber with external reference
+        if (data.external_reference) {
+          await supabase
+            .from("subscribers")
+            .update({ 
+              external_reference: data.external_reference,
+              mercadopago_preference_id: data.id 
+            })
+            .eq("cpf", cpfClean);
+        }
+
         toast({
           title: "Redirecionando para pagamento",
           description: "Você será redirecionado para o Mercado Pago",
