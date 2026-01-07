@@ -68,6 +68,57 @@ export type Database = {
         }
         Relationships: []
       }
+      subscribers: {
+        Row: {
+          address: string
+          cpf: string
+          created_at: string
+          discount_applied: boolean | null
+          email: string
+          external_reference: string | null
+          id: string
+          mercadopago_payment_id: string | null
+          mercadopago_preference_id: string | null
+          name: string
+          paid_at: string | null
+          phone: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          cpf: string
+          created_at?: string
+          discount_applied?: boolean | null
+          email: string
+          external_reference?: string | null
+          id?: string
+          mercadopago_payment_id?: string | null
+          mercadopago_preference_id?: string | null
+          name: string
+          paid_at?: string | null
+          phone: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          cpf?: string
+          created_at?: string
+          discount_applied?: boolean | null
+          email?: string
+          external_reference?: string | null
+          id?: string
+          mercadopago_payment_id?: string | null
+          mercadopago_preference_id?: string | null
+          name?: string
+          paid_at?: string | null
+          phone?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -104,6 +155,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      subscription_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "cancelled"
+        | "refunded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -232,6 +289,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      subscription_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "cancelled",
+        "refunded",
+      ],
     },
   },
 } as const

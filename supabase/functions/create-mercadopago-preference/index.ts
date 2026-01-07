@@ -38,6 +38,9 @@ serve(async (req: Request): Promise<Response> => {
     const basePrice = 19.99;
     const finalPrice = discountApplied ? 18.99 : basePrice;
 
+    // Generate external reference
+    const externalReference = `associado_${Date.now()}_${payer.cpf}`;
+
     console.log("Creating preference for payer:", payer.email, "with discount:", discountApplied);
 
     // Parse phone number
@@ -82,7 +85,7 @@ serve(async (req: Request): Promise<Response> => {
       },
       auto_return: "approved",
       statement_descriptor: "CLUBE AQUI TEM",
-      external_reference: `associado_${Date.now()}_${payer.cpf}`,
+      external_reference: externalReference,
       notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook`,
     };
 
@@ -111,6 +114,7 @@ serve(async (req: Request): Promise<Response> => {
         id: data.id,
         init_point: data.init_point,
         sandbox_init_point: data.sandbox_init_point,
+        external_reference: externalReference,
       }),
       {
         status: 200,
