@@ -33,6 +33,7 @@ const Associar = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showExitPopup, setShowExitPopup] = useState(false);
   const [discountApplied, setDiscountApplied] = useState(false);
+  const [paymentType, setPaymentType] = useState<"annual" | "monthly">("annual");
   const hasShownPopup = useRef(false);
   const [formData, setFormData] = useState({
     nome_completo: "",
@@ -42,6 +43,10 @@ const Associar = () => {
     cpf: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Pricing
+  const monthlyPrice = discountApplied ? 18.99 : 19.99;
+  const annualPrice = discountApplied ? 227.88 : 239.88;
 
   // Check if form is empty
   const isFormEmpty = () => {
@@ -151,6 +156,7 @@ const Associar = () => {
             cpf: cpfClean,
           },
           discountApplied,
+          paymentType,
         },
       });
 
@@ -258,9 +264,74 @@ const Associar = () => {
                 </div>
               )}
 
+              {/* Payment Type Selection */}
+              <div className="space-y-3 mb-6">
+                <Label className="text-base font-semibold">Escolha a forma de pagamento:</Label>
+                
+                <div 
+                  className={`relative rounded-xl p-4 border-2 cursor-pointer transition-all ${
+                    paymentType === "annual" 
+                      ? "border-primary bg-primary/5" 
+                      : "border-muted hover:border-primary/50"
+                  }`}
+                  onClick={() => setPaymentType("annual")}
+                >
+                  <div className="absolute -top-2 right-4 bg-accent text-accent-foreground text-xs font-bold px-2 py-0.5 rounded-full">
+                    RECOMENDADO
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                      paymentType === "annual" ? "border-primary" : "border-muted-foreground"
+                    }`}>
+                      {paymentType === "annual" && <div className="w-3 h-3 rounded-full bg-primary" />}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-bold">Pagamento Anual</span>
+                        <span className="text-sm text-muted-foreground">(12 meses)</span>
+                      </div>
+                      <div className="text-2xl font-brand font-bold text-primary mt-1">
+                        R${annualPrice.toFixed(2).replace(".", ",")}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Parcele em até <strong>12x de R${(annualPrice / 12).toFixed(2).replace(".", ",")}</strong> no cartão
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div 
+                  className={`rounded-xl p-4 border-2 cursor-pointer transition-all ${
+                    paymentType === "monthly" 
+                      ? "border-primary bg-primary/5" 
+                      : "border-muted hover:border-primary/50"
+                  }`}
+                  onClick={() => setPaymentType("monthly")}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                      paymentType === "monthly" ? "border-primary" : "border-muted-foreground"
+                    }`}>
+                      {paymentType === "monthly" && <div className="w-3 h-3 rounded-full bg-primary" />}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-bold">Pagamento Mensal Recorrente</span>
+                      </div>
+                      <div className="text-2xl font-brand font-bold text-primary mt-1">
+                        R${monthlyPrice.toFixed(2).replace(".", ",")}/mês
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Débito automático no cartão por 12 meses (fidelidade)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-accent/10 rounded-xl p-4 mb-6 border border-accent/20">
                 <h4 className="font-brand font-semibold text-accent mb-2">
-                  Por apenas {discountApplied ? "R$18,99" : "R$19,99"}/mês você terá:
+                  Contrato de 12 meses - Você terá acesso a:
                 </h4>
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   <li className="flex items-center gap-2">
@@ -389,7 +460,10 @@ const Associar = () => {
                   ) : (
                     <>
                       <CreditCard className="w-5 h-5 mr-2" />
-                      Ir para Pagamento - {discountApplied ? "R$18,99" : "R$19,99"}/mês
+                      {paymentType === "annual" 
+                        ? `Pagar R$${annualPrice.toFixed(2).replace(".", ",")} (12 meses)`
+                        : `Assinar R$${monthlyPrice.toFixed(2).replace(".", ",")}/mês`
+                      }
                     </>
                   )}
                 </Button>
