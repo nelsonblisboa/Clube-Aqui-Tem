@@ -1,8 +1,26 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// Lista de origens permitidas (adicione seu domínio de produção)
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:8080",
+  "https://lovable.dev",
+  // Adicione aqui o domínio de produção do seu site
+];
+
+const getCorsHeaders = (origin: string | null) => {
+  // Verifica se a origem é permitida ou se contém .lovable.dev
+  const isAllowed = origin && (
+    ALLOWED_ORIGINS.includes(origin) || 
+    origin.endsWith('.lovable.dev') ||
+    origin.endsWith('.lovable.app')
+  );
+  
+  return {
+    "Access-Control-Allow-Origin": isAllowed ? origin : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
 };
 
 interface PayerInfo {
@@ -20,6 +38,9 @@ interface RequestBody {
 }
 
 serve(async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Users, Store, CreditCard, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  LogOut, Users, Store, CreditCard, CheckCircle, Clock, XCircle, 
+  Search, Download, MessageCircle, Smartphone, ShoppingBag, ExternalLink,
+  Filter
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
 
 interface Partner {
   id: string;
@@ -32,12 +39,42 @@ interface Subscriber {
   created_at: string;
 }
 
+// Links externos configuráveis
+const EXTERNAL_LINKS = [
+  {
+    id: "whatsapp",
+    name: "Grupo WhatsApp",
+    url: "https://chat.whatsapp.com/LINK_DO_SEU_GRUPO", // Substitua pelo link real
+    icon: MessageCircle,
+    color: "bg-green-500 hover:bg-green-600",
+  },
+  {
+    id: "app",
+    name: "App Cupons",
+    url: "https://play.google.com/store/apps/details?id=SEU_APP", // Substitua pelo link real
+    icon: Smartphone,
+    color: "bg-blue-500 hover:bg-blue-600",
+  },
+  {
+    id: "infoprodutos",
+    name: "Infoprodutos",
+    url: "https://seu-link-de-infoprodutos.com", // Substitua pelo link real
+    icon: ShoppingBag,
+    color: "bg-purple-500 hover:bg-purple-600",
+  },
+];
+
 const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filtros e busca
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [partnerSearchTerm, setPartnerSearchTerm] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -51,13 +88,13 @@ const Admin = () => {
       return;
     }
 
-    // Check if user has admin role
+    // Check if user has admin role - UI-only protection, RLS enforces data access
     const { data: roles } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', session.user.id)
       .eq('role', 'admin')
-      .single();
+      .maybeSingle();
 
     if (!roles) {
       toast({
@@ -86,7 +123,6 @@ const Admin = () => {
       if (partnersResult.data) setPartners(partnersResult.data);
       if (subscribersResult.data) setSubscribers(subscribersResult.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
       toast({
         title: "Erro ao carregar dados",
         description: "Você não tem permissão para visualizar estes dados ou ocorreu um erro.",
@@ -117,6 +153,14 @@ const Admin = () => {
       return `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9)}`;
     }
     return cpf;
+  };
+
+  // Função para mascarar dados sensíveis na exportação
+  const maskCPF = (cpf: string) => {
+    if (cpf.length >= 8) {
+      return `***${cpf.slice(3, 6)}***-${cpf.slice(-2)}`;
+    }
+    return "***";
   };
 
   const getStatusBadge = (status: string) => {
@@ -151,11 +195,93 @@ const Admin = () => {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'approved': return 'Aprovado';
+      case 'pending': return 'Pendente';
+      case 'rejected': return 'Rejeitado';
+      default: return status;
+    }
+  };
+
   const getStatusCounts = () => {
     const approved = subscribers.filter(s => s.status === 'approved').length;
     const pending = subscribers.filter(s => s.status === 'pending').length;
     const rejected = subscribers.filter(s => s.status === 'rejected').length;
     return { approved, pending, rejected };
+  };
+
+  // Filtros para associados
+  const filteredSubscribers = useMemo(() => {
+    return subscribers.filter(subscriber => {
+      const matchesSearch = 
+        subscriber.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        subscriber.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        subscriber.cpf.includes(searchTerm) ||
+        subscriber.phone.includes(searchTerm);
+      
+      const matchesStatus = statusFilter === "all" || subscriber.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [subscribers, searchTerm, statusFilter]);
+
+  // Filtros para parceiros
+  const filteredPartners = useMemo(() => {
+    return partners.filter(partner => {
+      return (
+        partner.estabelecimento.toLowerCase().includes(partnerSearchTerm.toLowerCase()) ||
+        partner.responsavel.toLowerCase().includes(partnerSearchTerm.toLowerCase()) ||
+        partner.email.toLowerCase().includes(partnerSearchTerm.toLowerCase()) ||
+        partner.telefone.includes(partnerSearchTerm)
+      );
+    });
+  }, [partners, partnerSearchTerm]);
+
+  // Exportar para Excel
+  const exportToExcel = () => {
+    // Preparar dados de associados (com dados sensíveis mascarados)
+    const subscribersData = filteredSubscribers.map(s => ({
+      Nome: s.name,
+      Email: s.email,
+      Telefone: s.phone,
+      CPF: maskCPF(s.cpf),
+      Endereço: s.address,
+      Status: getStatusLabel(s.status),
+      Desconto: s.discount_applied ? "5% aplicado" : "Sem desconto",
+      "Data Pagamento": s.paid_at ? formatDate(s.paid_at) : "-",
+      "Data Cadastro": formatDate(s.created_at),
+    }));
+
+    // Preparar dados de parceiros
+    const partnersData = filteredPartners.map(p => ({
+      Estabelecimento: p.estabelecimento,
+      Responsável: p.responsavel,
+      Telefone: p.telefone,
+      Email: p.email,
+      Endereço: p.endereco,
+      "Data Cadastro": formatDate(p.created_at),
+    }));
+
+    // Criar workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Adicionar planilha de associados
+    const wsSubscribers = XLSX.utils.json_to_sheet(subscribersData);
+    XLSX.utils.book_append_sheet(wb, wsSubscribers, "Associados");
+    
+    // Adicionar planilha de parceiros
+    const wsPartners = XLSX.utils.json_to_sheet(partnersData);
+    XLSX.utils.book_append_sheet(wb, wsPartners, "Parceiros");
+
+    // Gerar arquivo e download
+    const date = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `ClubeAquiTem_Dados_${date}.xlsx`);
+
+    toast({
+      title: "Exportação concluída",
+      description: "Os dados foram exportados para Excel com sucesso.",
+    });
   };
 
   const statusCounts = getStatusCounts();
@@ -171,13 +297,51 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background py-8">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <h1 className="text-4xl font-bold text-primary">Painel Administrativo</h1>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sair
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={exportToExcel}>
+              <Download className="mr-2 h-4 w-4" />
+              Exportar Excel
+            </Button>
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+          </div>
         </div>
+
+        {/* Links Externos */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ExternalLink className="h-5 w-5" />
+              Links Rápidos
+            </CardTitle>
+            <CardDescription>
+              Acesse rapidamente as plataformas dos associados
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              {EXTERNAL_LINKS.map((link) => {
+                const IconComponent = link.icon;
+                return (
+                  <a
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors ${link.color}`}
+                  >
+                    <IconComponent className="h-5 w-5" />
+                    {link.name}
+                  </a>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -252,10 +416,37 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>Associados e Status de Pagamento</CardTitle>
                 <CardDescription>
-                  Total de {subscribers.length} associado(s) cadastrado(s)
+                  Mostrando {filteredSubscribers.length} de {subscribers.length} associado(s)
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Filtros e Busca */}
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome, email, CPF ou telefone..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filtrar por status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os status</SelectItem>
+                        <SelectItem value="approved">Aprovados</SelectItem>
+                        <SelectItem value="pending">Pendentes</SelectItem>
+                        <SelectItem value="rejected">Rejeitados</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -271,14 +462,16 @@ const Admin = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {subscribers.length === 0 ? (
+                      {filteredSubscribers.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center text-muted-foreground">
-                            Nenhum associado cadastrado ainda
+                            {searchTerm || statusFilter !== "all" 
+                              ? "Nenhum associado encontrado com os filtros aplicados"
+                              : "Nenhum associado cadastrado ainda"}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        subscribers.map((subscriber) => (
+                        filteredSubscribers.map((subscriber) => (
                           <TableRow key={subscriber.id}>
                             <TableCell className="font-medium">{subscriber.name}</TableCell>
                             <TableCell>{formatCPF(subscriber.cpf)}</TableCell>
@@ -313,10 +506,23 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>Parceiros Cadastrados</CardTitle>
                 <CardDescription>
-                  Total de {partners.length} parceiro(s) cadastrado(s)
+                  Mostrando {filteredPartners.length} de {partners.length} parceiro(s)
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Busca de Parceiros */}
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por estabelecimento, responsável, email ou telefone..."
+                      value={partnerSearchTerm}
+                      onChange={(e) => setPartnerSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -330,14 +536,16 @@ const Admin = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {partners.length === 0 ? (
+                      {filteredPartners.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center text-muted-foreground">
-                            Nenhum parceiro cadastrado ainda
+                            {partnerSearchTerm 
+                              ? "Nenhum parceiro encontrado com a busca aplicada"
+                              : "Nenhum parceiro cadastrado ainda"}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        partners.map((partner) => (
+                        filteredPartners.map((partner) => (
                           <TableRow key={partner.id}>
                             <TableCell className="font-medium">{partner.estabelecimento}</TableCell>
                             <TableCell>{partner.responsavel}</TableCell>
