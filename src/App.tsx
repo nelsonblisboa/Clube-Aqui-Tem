@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import Associar from "./pages/Associar";
+import LeadCapture from "./pages/LeadCapture";
 import PagamentoSucesso from "./pages/PagamentoSucesso";
 import PagamentoErro from "./pages/PagamentoErro";
 import PagamentoPendente from "./pages/PagamentoPendente";
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/associar" element={<Associar />} />
+          <Route path="/lp" element={<LeadCapture />} />
           <Route path="/pagamento-sucesso" element={<PagamentoSucesso />} />
           <Route path="/pagamento-erro" element={<PagamentoErro />} />
           <Route path="/pagamento-pendente" element={<PagamentoPendente />} />
