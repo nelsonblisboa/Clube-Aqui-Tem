@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   LogOut, Users, Store, CreditCard, CheckCircle, Clock, XCircle, 
   Search, Download, MessageCircle, Smartphone, ShoppingBag, ExternalLink,
-  Filter
+  Filter, Target, Copy, FileSpreadsheet
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
@@ -39,6 +39,17 @@ interface Subscriber {
   created_at: string;
 }
 
+interface Lead {
+  id: string;
+  nome_completo: string;
+  email: string;
+  telefone: string;
+  source: string;
+  converted: boolean;
+  notes: string | null;
+  created_at: string;
+}
+
 // Links externos configuráveis
 const EXTERNAL_LINKS = [
   {
@@ -62,6 +73,13 @@ const EXTERNAL_LINKS = [
     icon: ShoppingBag,
     color: "bg-purple-500 hover:bg-purple-600",
   },
+  {
+    id: "landing-page",
+    name: "LP Meta Ads",
+    url: "/lp",
+    icon: Target,
+    color: "bg-orange-500 hover:bg-orange-600",
+  },
 ];
 
 const Admin = () => {
@@ -69,12 +87,14 @@ const Admin = () => {
   const { toast } = useToast();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Filtros e busca
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [partnerSearchTerm, setPartnerSearchTerm] = useState("");
+  const [leadSearchTerm, setLeadSearchTerm] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -108,9 +128,10 @@ const Admin = () => {
 
   const fetchData = async () => {
     try {
-      const [partnersResult, subscribersResult] = await Promise.all([
+      const [partnersResult, subscribersResult, leadsResult] = await Promise.all([
         supabase.from('partners').select('*').order('created_at', { ascending: false }),
-        supabase.from('subscribers').select('*').order('created_at', { ascending: false })
+        supabase.from('subscribers').select('*').order('created_at', { ascending: false }),
+        supabase.from('leads').select('*').order('created_at', { ascending: false })
       ]);
 
       if (partnersResult.error) {
@@ -122,6 +143,7 @@ const Admin = () => {
 
       if (partnersResult.data) setPartners(partnersResult.data);
       if (subscribersResult.data) setSubscribers(subscribersResult.data);
+      if (leadsResult.data) setLeads(leadsResult.data);
     } catch (error) {
       toast({
         title: "Erro ao carregar dados",
@@ -238,6 +260,23 @@ const Admin = () => {
     });
   }, [partners, partnerSearchTerm]);
 
+  // Filtros para leads
+  const filteredLeads = useMemo(() => {
+    return leads.filter(lead => {
+      return (
+        lead.nome_completo.toLowerCase().includes(leadSearchTerm.toLowerCase()) ||
+        lead.email.toLowerCase().includes(leadSearchTerm.toLowerCase()) ||
+        lead.telefone.includes(leadSearchTerm)
+      );
+    });
+  }, [leads, leadSearchTerm]);
+
+  const copyLandingPageUrl = () => {
+    const url = `${window.location.origin}/lp`;
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link copiado!", description: url });
+  };
+
   // Exportar para Excel
   const exportToExcel = () => {
     // Preparar dados de associados (com dados sensíveis mascarados)
@@ -344,7 +383,7 @@ const Admin = () => {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -397,13 +436,30 @@ const Admin = () => {
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-orange-500/10 rounded-full flex items-center justify-center">
+                  <Target className="w-6 h-6 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Leads</p>
+                  <p className="text-2xl font-bold text-orange-600">{leads.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Tabs defaultValue="subscribers" className="w-full">
-          <TabsList className="grid w-full md:w-[400px] grid-cols-2">
+          <TabsList className="grid w-full md:w-[500px] grid-cols-3">
             <TabsTrigger value="subscribers">
               <CreditCard className="mr-2 h-4 w-4" />
               Associados
+            </TabsTrigger>
+            <TabsTrigger value="leads">
+              <Target className="mr-2 h-4 w-4" />
+              Leads
             </TabsTrigger>
             <TabsTrigger value="partners">
               <Store className="mr-2 h-4 w-4" />
@@ -491,6 +547,67 @@ const Admin = () => {
                               {subscriber.paid_at ? formatDate(subscriber.paid_at) : '-'}
                             </TableCell>
                             <TableCell>{formatDate(subscriber.created_at)}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="leads" className="mt-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Leads do Meta Ads</CardTitle>
+                  <CardDescription>
+                    {filteredLeads.length} lead(s) capturados - <Button variant="link" className="p-0 h-auto" onClick={copyLandingPageUrl}><Copy className="w-3 h-3 mr-1" />Copiar link LP</Button>
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome, email ou telefone..."
+                      value={leadSearchTerm}
+                      onChange={(e) => setLeadSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Telefone</TableHead>
+                        <TableHead>Fonte</TableHead>
+                        <TableHead>Data Cadastro</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLeads.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground">
+                            Nenhum lead capturado ainda
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredLeads.map((lead) => (
+                          <TableRow key={lead.id}>
+                            <TableCell className="font-medium">{lead.nome_completo}</TableCell>
+                            <TableCell>{lead.email}</TableCell>
+                            <TableCell>{lead.telefone}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{lead.source || "meta_ads"}</Badge>
+                            </TableCell>
+                            <TableCell>{formatDate(lead.created_at)}</TableCell>
                           </TableRow>
                         ))
                       )}

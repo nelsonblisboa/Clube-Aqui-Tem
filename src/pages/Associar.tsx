@@ -460,10 +460,7 @@ const Associar = () => {
                   ) : (
                     <>
                       <CreditCard className="w-5 h-5 mr-2" />
-                      {paymentType === "annual" 
-                        ? `Pagar R$${annualPrice.toFixed(2).replace(".", ",")} (12 meses)`
-                        : `Assinar R$${monthlyPrice.toFixed(2).replace(".", ",")}/mês`
-                      }
+                      Pagamento
                     </>
                   )}
                 </Button>
