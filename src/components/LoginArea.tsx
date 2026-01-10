@@ -23,19 +23,31 @@ const LoginArea = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <p className="text-center text-muted-foreground">
-                  Cadastre-se para acessar cupons e benefícios exclusivos do Clube Aqui Tem
+                  Já é associado? Acesse seus cupons e benefícios exclusivos do Clube Aqui Tem
                 </p>
                 <Button 
-                  variant="default" 
+                  variant="hero" 
                   size="lg" 
-                  onClick={() => navigate("/login")}
-                  className="w-full text-lg"
+                  onClick={() => navigate("/minha-conta")}
+                  className="w-full text-lg shadow-accent"
                 >
                   <LogIn className="mr-2 h-5 w-5" />
-                  Acessar Área do Associado
+                  Acessar Minha Conta
                 </Button>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Ainda não é associado?
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigate("/associar")}
+                  >
+                    Associar-se Agora
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

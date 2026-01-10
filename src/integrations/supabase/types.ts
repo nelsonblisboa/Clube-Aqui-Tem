@@ -109,11 +109,13 @@ export type Database = {
           discount_applied: boolean | null
           email: string
           external_reference: string | null
+          first_access: boolean | null
           id: string
           mercadopago_payment_id: string | null
           mercadopago_preference_id: string | null
           name: string
           paid_at: string | null
+          password_hash: string | null
           phone: string
           status: Database["public"]["Enums"]["subscription_status"]
           updated_at: string
@@ -125,11 +127,13 @@ export type Database = {
           discount_applied?: boolean | null
           email: string
           external_reference?: string | null
+          first_access?: boolean | null
           id?: string
           mercadopago_payment_id?: string | null
           mercadopago_preference_id?: string | null
           name: string
           paid_at?: string | null
+          password_hash?: string | null
           phone: string
           status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
@@ -141,11 +145,13 @@ export type Database = {
           discount_applied?: boolean | null
           email?: string
           external_reference?: string | null
+          first_access?: boolean | null
           id?: string
           mercadopago_payment_id?: string | null
           mercadopago_preference_id?: string | null
           name?: string
           paid_at?: string | null
+          password_hash?: string | null
           phone?: string
           status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
