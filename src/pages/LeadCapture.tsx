@@ -430,7 +430,7 @@ const LeadCapture = () => {
               <div className="bg-gradient-to-r from-accent to-accent/80 py-3 px-6 text-center">
                 <p className="text-accent-foreground font-semibold flex items-center justify-center gap-2">
                   <Gift className="w-5 h-5" />
-                  CADASTRE-SE GRÁTIS E GARANTA SUA VAGA
+                  RECEBA SUA PROPOSTA EXCLUSIVA
                 </p>
               </div>
               
