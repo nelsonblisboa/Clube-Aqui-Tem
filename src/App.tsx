@@ -11,6 +11,7 @@ import LeadCapture from "./pages/LeadCapture";
 import PagamentoSucesso from "./pages/PagamentoSucesso";
 import PagamentoErro from "./pages/PagamentoErro";
 import PagamentoPendente from "./pages/PagamentoPendente";
+import AreaMembros from "./pages/AreaMembros";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/pagamento-sucesso" element={<PagamentoSucesso />} />
           <Route path="/pagamento-erro" element={<PagamentoErro />} />
           <Route path="/pagamento-pendente" element={<PagamentoPendente />} />
+          <Route path="/minha-conta" element={<AreaMembros />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
