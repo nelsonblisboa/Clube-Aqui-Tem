@@ -13,8 +13,8 @@ serve(async (req: Request) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("APP_SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("APP_SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get authorization header to verify admin access
@@ -63,7 +63,7 @@ serve(async (req: Request) => {
     const headers = Object.keys(formattedLeads[0] || {});
     const csvRows = [
       headers.join(","),
-      ...formattedLeads.map(row => 
+      ...formattedLeads.map(row =>
         headers.map(h => `"${(row[h as keyof typeof row] || "").toString().replace(/"/g, '""')}"`).join(",")
       )
     ];

@@ -1,4 +1,4 @@
-project_id = "wgfdedefbxljcpbcgbai"
+project_id = "wmivufnnbsvmeyjapjzx"
 
 [functions.create-mercadopago-preference]
 verify_jwt = false

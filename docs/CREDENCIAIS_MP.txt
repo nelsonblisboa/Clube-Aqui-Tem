@@ -1,0 +1,22 @@
+✅ **CREDENCIAIS CORRETAS DO MERCADO PAGO**
+
+**Access Token:**
+APP_USR-3570941313620005-010316-78e704c4c5df8a69052e41659aa7d5-24364008
+
+**Public Key:**
+APP_USR-bc27f3e-fbb-4d54-a927-ca2c9ef5d746
+
+**Client ID:**
+3570941313620005
+
+**Client Secret:**
+N6WDQ93V8ZDQNqJqKpVSnykeJODxqF
+
+---
+
+**Atualize no Supabase:**
+https://supabase.com/dashboard/project/wmivufnnbsvmeyjapjzx/functions/secrets
+
+1. MERCADO_PAGO_ACCESS_TOKEN → Cole o Access Token acima
+2. MERCADO_PAGO_PUBLIC_KEY → Cole a Public Key acima
+3. Salve ambos

@@ -1,9 +1,10 @@
 import { Facebook, Instagram, Mail, Phone, MapPin } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
-    <footer className="bg-primary text-primary-foreground py-12">
+    <footer className="bg-primary text-primary-foreground py-12 notranslate" translate="no">
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Logo e Descrição */}
@@ -13,6 +14,7 @@ const Footer = () => {
               <div className="flex flex-col leading-tight">
                 <span className="text-xl font-brand font-extrabold text-primary-foreground tracking-tight">Clube</span>
                 <span className="text-lg font-brand font-bold text-accent -mt-1">Aqui Tem</span>
+                <span className="text-[9px] text-white/60 font-medium uppercase tracking-widest -mt-0.5">Vantagens e Benefícios</span>
               </div>
             </div>
             <p className="text-sm text-primary-foreground/80 font-body">
@@ -24,21 +26,43 @@ const Footer = () => {
           <div>
             <h3 className="font-semibold mb-4 text-lg">Links Úteis</h3>
             <ul className="space-y-2 text-sm text-primary-foreground/80">
-              <li><a href="#" className="hover:text-accent transition-colors">Sobre Nós</a></li>
-              <li><a href="#" className="hover:text-accent transition-colors">Como Funciona</a></li>
-              <li><a href="#" className="hover:text-accent transition-colors">Parceiros</a></li>
-              <li><a href="#" className="hover:text-accent transition-colors">Blog</a></li>
+              <li>
+                <a href="/#inicio" className="hover:text-accent transition-colors">
+                  <span className="notranslate" translate="no">Sobre Nós</span>
+                </a>
+              </li>
+              <li>
+                <a href="/#como-funciona" className="hover:text-accent transition-colors">
+                  <span className="notranslate" translate="no">Como Funciona</span>
+                </a>
+              </li>
+              <li>
+                <Link to="/seja-parceiro" className="hover:text-accent transition-colors">
+                  <span className="notranslate" translate="no">Seja um Parceiro</span>
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Institucional (Renomeado para evitar conflito com Legal/Juridico) */}
           <div>
-            <h3 className="font-semibold mb-4 text-lg">Legal</h3>
+            <h3 className="font-semibold mb-4 text-lg">Institucional</h3>
             <ul className="space-y-2 text-sm text-primary-foreground/80">
-              <li><a href="#" className="hover:text-accent transition-colors">Política de Privacidade</a></li>
-              <li><a href="#" className="hover:text-accent transition-colors">Termos de Uso</a></li>
-              <li><a href="#" className="hover:text-accent transition-colors">Cancelamento</a></li>
-              <li><a href="#" className="hover:text-accent transition-colors">FAQ</a></li>
+              <li>
+                <Link to="/politica-de-privacidade" className="hover:text-accent transition-colors">
+                  <span className="notranslate" translate="no">Política de Privacidade</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/termos-de-uso" className="hover:text-accent transition-colors">
+                  <span className="notranslate" translate="no">Termos de Uso</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/contato" className="hover:text-accent transition-colors">
+                  <span className="notranslate" translate="no">Ajuda e Suporte</span>
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -48,23 +72,28 @@ const Footer = () => {
             <ul className="space-y-3 text-sm text-primary-foreground/80">
               <li className="flex items-center gap-2">
                 <Mail size={16} className="text-accent" />
-                <a href="mailto:clubeaquitem.comercial@gmail.com" className="hover:text-accent transition-colors">
-                  clubeaquitem.comercial@gmail.com
+                <a
+                  href="mailto:clubeaquitem.comercial@gmail.com"
+                  className="hover:text-accent transition-colors"
+                >
+                  <span className="notranslate" translate="no">clubeaquitem.comercial@gmail.com</span>
                 </a>
               </li>
               <li className="flex items-center gap-2">
                 <Phone size={16} className="text-accent" />
                 <a href="tel:+5521964168479" className="hover:text-accent transition-colors">
-                  (21) 96416-8479
+                  <span className="notranslate" translate="no">(21) 96416-8479</span>
                 </a>
               </li>
               <li className="flex items-center gap-2">
                 <MapPin size={16} className="text-accent" />
-                <span>Nova Iguaçu - RJ</span>
+                <span className="notranslate" translate="no">Nova Iguaçu - RJ</span>
               </li>
-              <li className="text-xs">
-                Rua Padre Aloisio Rucha, 75 - Loja 13<br />
-                Comendador Soares
+              <li className="text-xs leading-relaxed text-primary-foreground/70">
+                <span className="notranslate" translate="no">
+                  Rua Padre Aloisio Rucha, 75 - Loja 13<br />
+                  Comendador Soares
+                </span>
               </li>
             </ul>
           </div>
@@ -74,7 +103,7 @@ const Footer = () => {
         <div className="border-t border-primary-foreground/20 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-primary-foreground/80">
-              © 2025 Clube Aqui Tem. Todos os direitos reservados.
+              © 2025 Clube Aqui Tem Vantagens e Benefícios. Todos os direitos reservados.
             </p>
             <div className="flex gap-4">
               <a href="https://www.facebook.com/clubeaquitem" target="_blank" rel="noopener noreferrer" className="text-primary-foreground hover:text-accent transition-colors" aria-label="Facebook">

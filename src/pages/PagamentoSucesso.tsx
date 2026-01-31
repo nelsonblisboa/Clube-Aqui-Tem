@@ -1,93 +1,131 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Home, PartyPopper } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { CheckCircle, Home, PartyPopper, ArrowRight, Zap, Download, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-import logo from "@/assets/logo.png";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 
 const PagamentoSucesso = () => {
   return (
-    <div className="min-h-screen bg-gradient-hero flex items-center justify-center py-8 px-4">
-      {/* Decorative elements */}
-      <div className="absolute top-20 left-10 w-32 h-32 bg-accent/10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl"></div>
+    <div className="min-h-screen flex flex-col bg-[#F9FAFB]">
+      <SEO
+        title="Pagamento Confirmado - Clube Aqui Tem"
+        description="Parabéns! Seu pagamento foi confirmado e você agora faz parte do maior clube de benefícios."
+      />
+      <Header />
 
-      <div className="container mx-auto max-w-lg relative z-10">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Card className="border-2 border-primary/20 shadow-xl text-center">
-            <CardHeader className="pb-2">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4"
-              >
-                <CheckCircle className="w-14 h-14 text-primary" />
-              </motion.div>
-              
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <PartyPopper className="w-6 h-6 text-accent" />
-                <span className="text-accent font-brand font-bold">Parabéns!</span>
-                <PartyPopper className="w-6 h-6 text-accent" />
+      <main className="flex-grow flex items-center justify-center pt-32 pb-20 px-4 relative overflow-hidden">
+        {/* Background Decorations */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-accent/10 rounded-full blur-[100px]"></div>
+        </div>
+
+        <div className="container mx-auto max-w-4xl relative z-10">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Information Side */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-left space-y-6"
+            >
+              <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-bold border border-green-200 shadow-sm">
+                <Sparkles className="w-4 h-4" />
+                Transação Aprovada
+              </div>
+              <h1 className="text-4xl md:text-6xl font-brand font-black text-primary leading-tight">
+                Bem-vindo ao <br />
+                <span className="text-accent underline underline-offset-8 decoration-accent/30">Clube Aqui Tem!</span>
+              </h1>
+              <p className="text-xl text-muted-foreground leading-relaxed">
+                Parabéns! Você acaba de garantir acesso exclusivo aos melhores descontos e benefícios da região.
+              </p>
+
+              <div className="space-y-4 pt-4">
+                <div className="flex items-center gap-4 group">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm">
+                    <Download className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-primary">Acesse o Web App</h4>
+                    <p className="text-sm text-muted-foreground">Sua carteirinha digital já está disponível.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 group">
+                  <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-all duration-300 shadow-sm">
+                    <Zap className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-primary">Economia Imediata</h4>
+                    <p className="text-sm text-muted-foreground">Apresente seu CPF nos parceiros e economize.</p>
+                  </div>
+                </div>
               </div>
 
-              <CardTitle className="text-2xl md:text-3xl font-brand text-primary">
-                Pagamento Confirmado!
-              </CardTitle>
-              <CardDescription className="text-base font-body">
-                Você agora é um associado do Clube Aqui Tem
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="pt-6 space-y-6">
-              <div className="bg-accent/10 rounded-xl p-4 border border-accent/20">
-                <h4 className="font-brand font-semibold text-foreground mb-2">Próximos passos:</h4>
-                <ul className="space-y-2 text-sm text-muted-foreground text-left">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
-                    <span>Você receberá um email com seus dados de acesso</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
-                    <span>Baixe o app ou acesse o portal de associados</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
-                    <span>Comece a aproveitar seus descontos exclusivos!</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="flex items-center justify-center gap-2">
-                <img src={logo} alt="Clube Aqui Tem" className="h-8 w-auto" />
-                <span className="font-brand text-lg">
-                  <span className="text-primary font-bold">Clube</span>
-                  <span className="text-accent font-extrabold"> Aqui Tem</span>
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                <Link to="/minha-conta">
-                  <Button variant="hero" size="lg" className="w-full shadow-accent">
-                    <CheckCircle className="w-5 h-5 mr-2" />
-                    Acessar Minha Conta
+              <div className="flex flex-col sm:flex-row gap-4 pt-6">
+                <Link to="/minha-conta" className="flex-1">
+                  <Button variant="hero" size="lg" className="w-full h-14 text-lg rounded-2xl shadow-xl shadow-accent/20 group">
+                    Acessar minha conta
+                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
-                <Link to="/">
-                  <Button variant="outline" size="lg" className="w-full">
-                    <Home className="w-5 h-5 mr-2" />
-                    Voltar para o Início
+                <Link to="/" className="flex-1">
+                  <Button variant="outline" size="lg" className="w-full h-14 text-lg rounded-2xl border-2">
+                    Explorar Parceiros
                   </Button>
                 </Link>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+            </motion.div>
+
+            {/* Visual Card Side */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <Card className="border-none shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] overflow-hidden bg-white group hover:translate-y-[-8px] transition-all duration-500">
+                <CardContent className="p-0">
+                  <div className="bg-primary p-12 text-center text-white relative">
+                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                      <PartyPopper className="w-32 h-32" />
+                    </div>
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                      className="w-24 h-24 bg-white/20 backdrop-blur-md rounded-[2rem] flex items-center justify-center mx-auto mb-6 border border-white/30 shadow-2xl"
+                    >
+                      <CheckCircle className="w-12 h-12 text-white" />
+                    </motion.div>
+                    <h3 className="text-3xl font-brand font-bold mb-2">Tudo Pronto!</h3>
+                    <p className="text-primary-foreground/70">Sua assinatura está ativa.</p>
+                  </div>
+                  <div className="p-10 space-y-6">
+                    <div className="flex justify-between items-center py-4 border-b border-muted">
+                      <span className="text-muted-foreground">Status da Assinatura</span>
+                      <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest">Ativo</span>
+                    </div>
+                    <div className="flex justify-between items-center py-4 border-b border-muted">
+                      <span className="text-muted-foreground">Data de Início</span>
+                      <span className="font-bold text-primary">{new Date().toLocaleDateString('pt-BR')}</span>
+                    </div>
+                    <div className="bg-muted/30 p-6 rounded-3xl border border-muted-foreground/10">
+                      <p className="text-sm text-center italic text-muted-foreground">
+                        "O Clube Aqui Tem transforma cada compra em uma oportunidade de economia."
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </div>
+      </main>
+
+      <Footer />
     </div>
   );
 };

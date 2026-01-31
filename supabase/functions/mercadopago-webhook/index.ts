@@ -27,19 +27,23 @@ serve(async (req: Request): Promise<Response> => {
 
   try {
     const accessToken = Deno.env.get("MERCADO_PAGO_ACCESS_TOKEN");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("APP_SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("APP_SUPABASE_SERVICE_ROLE_KEY");
 
     if (!accessToken || !supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing required environment variables");
-      throw new Error("Configuração não encontrada");
+      console.error("Missing required environment variables:", {
+        hasToken: !!accessToken,
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseServiceKey
+      });
+      throw new Error("Configuração da API não encontrada");
     }
 
     // Create Supabase client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const notification: MercadoPagoNotification = await req.json();
-    
+
     console.log("Received notification:", JSON.stringify(notification));
 
     // Only process payment notifications
@@ -126,10 +130,10 @@ serve(async (req: Request): Promise<Response> => {
     );
   } catch (error) {
     console.error("Error in mercadopago-webhook:", error);
-    
+
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Erro interno do servidor" 
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Erro interno do servidor"
       }),
       {
         status: 500,

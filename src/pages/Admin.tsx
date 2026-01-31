@@ -1,28 +1,48 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  LogOut, Users, Store, CreditCard, CheckCircle, Clock, XCircle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  LogOut, Users, Store, CreditCard, CheckCircle, Clock, XCircle,
   Search, Download, MessageCircle, Smartphone, ShoppingBag, ExternalLink,
-  Filter, Target, Copy, FileSpreadsheet
+  Filter, Target, Copy, FileSpreadsheet, Image as ImageIcon, LayoutDashboard,
+  Zap, ArrowRight, UserPlus, TrendingUp, Phone, MapPin, Mail, Building2, ShieldCheck, Calendar,
+  Eye, FileText, CreditCard as BillingIcon, MessageSquare, Edit, Trash, Loader2, Tag, Plus, UserCog, RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import * as XLSX from "xlsx";
+import CompaniesManager from "@/components/admin/CompaniesManager";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 
 interface Partner {
   id: string;
-  estabelecimento: string;
+  nome_estabelecimento: string;
   responsavel: string;
   telefone: string;
   email: string;
   endereco: string;
+  cnpj: string;
+  status: string;
+  logo_url: string | null;
   created_at: string;
 }
 
@@ -37,6 +57,9 @@ interface Subscriber {
   discount_applied: boolean;
   paid_at: string | null;
   created_at: string;
+  company_id?: string;
+  source?: string;
+  seller_id?: string;
 }
 
 interface Lead {
@@ -48,35 +71,46 @@ interface Lead {
   converted: boolean;
   notes: string | null;
   created_at: string;
+  seller_id?: string;
+}
+
+interface Seller {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  slug: string;
+  status: string;
+  created_at: string;
 }
 
 // Links externos configuráveis
 const EXTERNAL_LINKS = [
   {
-    id: "whatsapp",
+    id: "whatsapp-group",
     name: "Grupo WhatsApp",
-    url: "https://chat.whatsapp.com/LINK_DO_SEU_GRUPO", // Substitua pelo link real
+    url: "https://chat.whatsapp.com/...", // Link do grupo
     icon: MessageCircle,
     color: "bg-green-500 hover:bg-green-600",
   },
   {
-    id: "app",
-    name: "App Cupons",
-    url: "https://play.google.com/store/apps/details?id=SEU_APP", // Substitua pelo link real
-    icon: Smartphone,
+    id: "update-coupons", // ID alterado para identificar a ação
+    name: "Atualizar Cupons",
+    url: "#", // URL placeholder, será interceptado no onClick
+    icon: RefreshCw, // Icone de atualização (precisa importar)
     color: "bg-blue-500 hover:bg-blue-600",
   },
   {
     id: "infoprodutos",
     name: "Infoprodutos",
-    url: "https://seu-link-de-infoprodutos.com", // Substitua pelo link real
+    url: "https://infoprodutos.com...", // Liunk
     icon: ShoppingBag,
     color: "bg-purple-500 hover:bg-purple-600",
   },
   {
-    id: "landing-page",
+    id: "meta-ads",
     name: "LP Meta Ads",
-    url: "/lp",
+    url: "https://ads.facebook.com/...", // Link
     icon: Target,
     color: "bg-orange-500 hover:bg-orange-600",
   },
@@ -88,13 +122,71 @@ const Admin = () => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [allDiscounts, setAllDiscounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Filtros e busca
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [partnerSearchTerm, setPartnerSearchTerm] = useState("");
-  const [leadSearchTerm, setLeadSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("subscribers");
+  const [selectedPartner, setSelectedPartner] = useState<any>(null);
+  const [isPartnerDialogOpen, setIsPartnerDialogOpen] = useState(false);
+  const [selectedSubscriber, setSelectedSubscriber] = useState<any>(null);
+  const [isSubscriberDialogOpen, setIsSubscriberDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isLeadDialogOpen, setIsLeadDialogOpen] = useState(false);
+  const [selectedDiscount, setSelectedDiscount] = useState<any>(null);
+  const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
+
+  // Creation states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createType, setCreateType] = useState<"subscriber" | "lead" | "partner" | "discount" | null>(null);
+  const [formData, setFormData] = useState<any>({});
+
+  // Edit states
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState<any>(null);
+  const [partnerDiscounts, setPartnerDiscounts] = useState<any[]>([]);
+  const [loadingDiscounts, setLoadingDiscounts] = useState(false);
+  const [totals, setTotals] = useState({ subscribers: 0, partners: 0, leads: 0, sellers: 0 });
+  const [sellers, setSellers] = useState<Seller[]>([]);
+  const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
+  const [isSellerDialogOpen, setIsSellerDialogOpen] = useState(false);
+  const [sellerMetrics, setSellerMetrics] = useState<Record<string, { whatsapp: number; checkout: number }>>({});
+  const [couponStats, setCouponStats] = useState({ total: 0, lastUpdate: null as string | null });
+  const [isUpdatingCoupons, setIsUpdatingCoupons] = useState(false);
+
+  const openWhatsApp = (phone: string) => {
+    if (!phone) return;
+    const cleaned = phone.replace(/\D/g, '');
+    const formatted = cleaned.startsWith('55') ? cleaned : `55${cleaned}`;
+    window.open(`https://wa.me/${formatted}`, '_blank');
+  };
+
+  // Confirmation dialog state
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    onConfirm: () => { },
+  });
+
+  const askConfirmation = (title: string, description: string, onConfirm: () => void) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      description,
+      onConfirm: async () => {
+        await onConfirm();
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
 
   useEffect(() => {
     checkAuth();
@@ -108,7 +200,6 @@ const Admin = () => {
       return;
     }
 
-    // Check if user has admin role - UI-only protection, RLS enforces data access
     const { data: roles } = await supabase
       .from('user_roles')
       .select('role')
@@ -128,31 +219,359 @@ const Admin = () => {
 
   const fetchData = async () => {
     try {
-      const [partnersResult, subscribersResult, leadsResult] = await Promise.all([
-        supabase.from('partners').select('*').order('created_at', { ascending: false }),
-        supabase.from('subscribers').select('*').order('created_at', { ascending: false }),
-        supabase.from('leads').select('*').order('created_at', { ascending: false })
+      setLoading(true);
+
+      // Fetch counts separately to get the real global total (bypassing 1000 limit)
+      const [
+        countSubscribers,
+        countPartners,
+        countLeads,
+        countSellers,
+        partnersResult,
+        subscribersResult,
+        leadsResult,
+        altPartnersResult,
+        discountsResult,
+        sellersResult,
+        eventsResult
+      ] = await Promise.all([
+        supabase.from('subscribers').select('*', { count: 'exact', head: true }),
+        supabase.from('partner_accounts').select('*', { count: 'exact', head: true }),
+        supabase.from('leads').select('*', { count: 'exact', head: true }),
+        supabase.from('sellers').select('*', { count: 'exact', head: true }),
+        supabase.from('partner_accounts' as any).select('*').order('created_at', { ascending: false }),
+        supabase.from('subscribers' as any).select('*').order('created_at', { ascending: false }).limit(10000),
+        supabase.from('leads' as any).select('*').order('created_at', { ascending: false }),
+        supabase.from('partners' as any).select('*').order('created_at', { ascending: false }).limit(100),
+        supabase.from('partner_discounts' as any).select('*').order('created_at', { ascending: false }),
+        supabase.from('sellers' as any).select('*').order('created_at', { ascending: false }),
+        supabase.from('seller_events' as any).select('*')
       ]);
 
-      if (partnersResult.error) {
-        throw new Error(partnersResult.error.message);
-      }
-      if (subscribersResult.error) {
-        throw new Error(subscribersResult.error.message);
+      // Fetch external coupons stats separately
+      const { count: totalCoupons } = await supabase
+        .from('external_coupons' as any)
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+
+      const { data: latestCoupon } = await supabase
+        .from('external_coupons' as any)
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setCouponStats({
+        total: totalCoupons || 0,
+        lastUpdate: latestCoupon?.created_at || null
+      });
+
+      setTotals({
+        subscribers: countSubscribers.count || 0,
+        partners: countPartners.count || 0,
+        leads: countLeads.count || 0,
+        sellers: countSellers.count || 0
+      });
+
+      if (sellersResult.data) setSellers(sellersResult.data);
+
+      // Process seller metrics
+      if (eventsResult.data) {
+        const metrics: Record<string, { whatsapp: number; checkout: number }> = {};
+        eventsResult.data.forEach((event: any) => {
+          if (!metrics[event.seller_id]) {
+            metrics[event.seller_id] = { whatsapp: 0, checkout: 0 };
+          }
+          if (event.event_type === 'whatsapp_click') metrics[event.seller_id].whatsapp++;
+          if (event.event_type === 'checkout_intent') metrics[event.seller_id].checkout++;
+        });
+        setSellerMetrics(metrics);
       }
 
-      if (partnersResult.data) setPartners(partnersResult.data);
-      if (subscribersResult.data) setSubscribers(subscribersResult.data);
-      if (leadsResult.data) setLeads(leadsResult.data);
+      let allPartners: any[] = [];
+      if (partnersResult.data) allPartners = [...allPartners, ...partnersResult.data];
+      if (altPartnersResult && altPartnersResult.data) {
+        const altData = altPartnersResult.data as any[];
+        allPartners = [...allPartners, ...altData.map(p => ({
+          ...p,
+          nome_estabelecimento: p.estabelecimento || p.nome_estabelecimento,
+          status: p.status || 'pending'
+        }))];
+      }
+
+      const uniquePartners = allPartners.filter((p, index, self) =>
+        index === self.findIndex((t) => t.id === p.id)
+      );
+
+      setPartners(uniquePartners);
+      if (subscribersResult.data) setSubscribers(subscribersResult.data as any[]);
+      if (leadsResult.data) setLeads(leadsResult.data as any[]);
+      if (discountsResult.data) setAllDiscounts(discountsResult.data as any[]);
+
     } catch (error) {
-      toast({
-        title: "Erro ao carregar dados",
-        description: "Você não tem permissão para visualizar estes dados ou ocorreu um erro.",
-        variant: "destructive",
-      });
+      console.error("Fetch Error:", error);
+      toast({ title: "Erro ao carregar dados", variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPartnerDiscounts = async (partnerId: string) => {
+    setLoadingDiscounts(true);
+    try {
+      const { data, error } = await supabase
+        .from('partner_discounts' as any)
+        .select('*')
+        .eq('partner_id', partnerId);
+      if (error) throw error;
+      setPartnerDiscounts(data || []);
+    } catch (error) {
+      console.error("Error loading discounts:", error);
+    } finally {
+      setLoadingDiscounts(false);
+    }
+  };
+
+  const handleUpdateSubscriber = async (id: string, updates: any) => {
+    try {
+      const { error } = await supabase.from('subscribers' as any).update(updates).eq('id', id);
+      if (error) throw error;
+      toast({ title: "Sucesso", description: "Associado atualizado com sucesso." });
+      fetchData();
+      setIsSubscriberDialogOpen(false);
+      setIsEditing(false);
+    } catch (error) {
+      toast({ title: "Erro", description: "Falha ao atualizar associado.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteSubscriber = async (id: string) => {
+    askConfirmation(
+      "Excluir Associado?",
+      "Esta ação é irreversível e removerá todos os dados deste membro do sistema.",
+      async () => {
+        try {
+          const { error } = await supabase.from('subscribers' as any).delete().eq('id', id);
+          if (error) throw error;
+          toast({ title: "Sucesso", description: "Associado removido." });
+          fetchData();
+        } catch (error) {
+          toast({ title: "Erro", description: "Falha ao remover associado.", variant: "destructive" });
+        }
+      }
+    );
+  };
+
+  const handleUpdateLead = async (id: string, updates: any) => {
+    try {
+      const { error } = await supabase.from('leads').update(updates).eq('id', id);
+      if (error) throw error;
+      toast({ title: "Sucesso", description: "Lead atualizado." });
+      fetchData();
+      setIsLeadDialogOpen(false);
+      setIsEditing(false);
+    } catch (error) {
+      toast({ title: "Erro", description: "Falha ao atualizar lead.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteLead = async (id: string) => {
+    askConfirmation(
+      "Excluir Lead?",
+      "Deseja realmente remover este lead? Esta ação não pode ser desfeita.",
+      async () => {
+        try {
+          const { error } = await supabase.from('leads').delete().eq('id', id);
+          if (error) throw error;
+          toast({ title: "Sucesso", description: "Lead removido." });
+          fetchData();
+        } catch (error) {
+          toast({ title: "Erro", description: "Falha ao remover lead.", variant: "destructive" });
+        }
+      }
+    );
+  };
+
+  const handleUpdatePartner = async (id: string, updates: any) => {
+    try {
+      // Filtrar campos para a tabela 'partners' (vitrine pública)
+      const partnersData: any = {
+        estabelecimento: updates.nome_estabelecimento || updates.estabelecimento,
+        responsavel: updates.responsavel,
+        telefone: updates.telefone,
+        email: updates.email,
+        endereco: updates.endereco,
+      };
+
+      // Campos para a tabela 'partner_accounts' (autenticação)
+      const accountsData: any = {
+        nome_estabelecimento: updates.nome_estabelecimento || updates.estabelecimento,
+        responsavel: updates.responsavel,
+        telefone: updates.telefone,
+        email: updates.email,
+        endereco: updates.endereco,
+        cnpj: updates.cnpj,
+        status: updates.status
+      };
+
+      // Se houver uma nova senha
+      if (updates.password) {
+        accountsData.password_hash = await hashPassword(updates.password);
+      }
+
+      // Tentar atualizar em ambas as tabelas
+      const promises = [
+        supabase.from('partner_accounts' as any).update(accountsData).eq('id', id),
+        supabase.from('partners' as any).update(partnersData).eq('id', id)
+      ];
+
+      await Promise.all(promises);
+      toast({ title: "Sucesso", description: "Parceiro atualizado em todas as plataformas." });
+      fetchData();
+      setIsPartnerDialogOpen(false);
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Update Partner Error:", error);
+      toast({ title: "Erro", description: "Falha ao atualizar parceiro.", variant: "destructive" });
+    }
+  };
+
+  const handleDeletePartner = async (id: string) => {
+    askConfirmation(
+      "Excluir Parceiro?",
+      "Isso removerá o acesso ao painel e todas as ofertas deste parceiro na vitrine.",
+      async () => {
+        try {
+          await Promise.all([
+            supabase.from('partner_accounts' as any).delete().eq('id', id),
+            supabase.from('partners' as any).delete().eq('id', id)
+          ]);
+          toast({ title: "Sucesso", description: "Parceiro removido." });
+          fetchData();
+        } catch (error) {
+          toast({ title: "Erro", description: "Falha ao remover parceiro.", variant: "destructive" });
+        }
+      }
+    );
+  };
+
+  const handleUpdateDiscount = async (discountId: string, updates: any) => {
+    try {
+      const { error } = await supabase.from('partner_discounts' as any).update(updates).eq('id', discountId);
+      if (error) throw error;
+      toast({ title: "Sucesso", description: "Desconto atualizado." });
+      if (selectedPartner) loadPartnerDiscounts(selectedPartner.id);
+    } catch (error) {
+      toast({ title: "Erro", description: "Falha ao atualizar desconto.", variant: "destructive" });
+    }
+  };
+
+  const handleCreateSubscriber = async (data: any) => {
+    try {
+      const { error } = await supabase.from('subscribers' as any).insert([{
+        ...data,
+        status: data.status || 'approved',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }]);
+      if (error) throw error;
+      toast({ title: "Sucesso", description: "Associado criado manualment." });
+      fetchData();
+      setIsCreateDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Erro", description: "Falha ao criar associado.", variant: "destructive" });
+    }
+  };
+
+  const handleCreateLead = async (data: any) => {
+    try {
+      const { error } = await supabase.from('leads').insert([{
+        ...data,
+        converted: false,
+        created_at: new Date().toISOString()
+      }]);
+      if (error) throw error;
+      toast({ title: "Sucesso", description: "Lead cadastrado manualmente." });
+      fetchData();
+      setIsCreateDialogOpen(false);
+    } catch (error) {
+      toast({ title: "Erro", description: "Falha ao cadastrar lead.", variant: "destructive" });
+    }
+  };
+
+  const handleCreatePartner = async (data: any) => {
+    try {
+      if (!data.password || data.password.length < 6) {
+        toast({ title: "Senha inválida", description: "A senha deve ter pelo menos 6 caracteres.", variant: "destructive" });
+        return;
+      }
+
+      const hashedPassword = await hashPassword(data.password);
+
+      // 1. Inserir na conta de autenticação
+      const { data: account, error: accError } = await supabase.from('partner_accounts' as any).insert([{
+        email: data.email.toLowerCase(),
+        password_hash: hashedPassword,
+        nome_estabelecimento: data.nome_estabelecimento,
+        responsavel: data.responsavel,
+        telefone: data.telefone,
+        cnpj: data.cnpj || "",
+        endereco: data.endereco,
+        status: 'active',
+        first_access: false
+      }]).select().single();
+
+      if (accError) throw accError;
+
+      // 2. Inserir na vitrine pública (usando o mesmo ID para manter vínculo)
+      const partnerData = {
+        id: account.id,
+        email: data.email.toLowerCase(),
+        endereco: data.endereco,
+        estabelecimento: data.nome_estabelecimento,
+        responsavel: data.responsavel,
+        telefone: data.telefone,
+        created_at: new Date().toISOString()
+      };
+
+      const { error: partError } = await supabase.from('partners' as any).insert([partnerData]);
+      if (partError) {
+        console.warn("Erro ao inserir na vitrine, mas conta foi criada:", partError);
+      }
+
+      toast({ title: "Sucesso", description: "Parceiro cadastrado e conta de acesso criada." });
+      fetchData();
+      setIsCreateDialogOpen(false);
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: "Erro", description: error.message || "Falha ao cadastrar parceiro.", variant: "destructive" });
+    }
+  };
+
+  const handleCreateGlobalDiscount = async (data: any) => {
+    try {
+      if (!data.partner_id) throw new Error("Selecione um parceiro.");
+      const { error } = await supabase.from('partner_discounts' as any).insert([{
+        ...data,
+        ativo: true,
+        created_at: new Date().toISOString()
+      }]);
+      if (error) throw error;
+      toast({ title: "Sucesso", description: "Nova oferta cadastrada." });
+      fetchData();
+      setIsCreateDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message || "Falha ao criar oferta.", variant: "destructive" });
+    }
+  };
+
+  const hashPassword = async (password: string): Promise<string> => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   };
 
   const handleLogout = async () => {
@@ -160,13 +579,21 @@ const Admin = () => {
     navigate("/");
   };
 
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric'
     });
   };
 
@@ -177,511 +604,1841 @@ const Admin = () => {
     return cpf;
   };
 
-  // Função para mascarar dados sensíveis na exportação
-  const maskCPF = (cpf: string) => {
-    if (cpf.length >= 8) {
-      return `***${cpf.slice(3, 6)}***-${cpf.slice(-2)}`;
-    }
-    return "***";
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
         return (
-          <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Aprovado
+          <Badge className="bg-green-100 text-green-700 border-none px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest">
+            Ativo
           </Badge>
         );
       case 'pending':
         return (
-          <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
-            <Clock className="w-3 h-3 mr-1" />
+          <Badge className="bg-amber-100 text-amber-700 border-none px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest">
             Pendente
           </Badge>
         );
       case 'rejected':
         return (
-          <Badge className="bg-red-500/10 text-red-600 border-red-500/30">
-            <XCircle className="w-3 h-3 mr-1" />
-            Rejeitado
+          <Badge className="bg-red-100 text-red-700 border-none px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest">
+            Cancelado
           </Badge>
         );
       default:
-        return (
-          <Badge variant="secondary">
-            {status}
-          </Badge>
-        );
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'approved': return 'Aprovado';
-      case 'pending': return 'Pendente';
-      case 'rejected': return 'Rejeitado';
-      default: return status;
-    }
-  };
-
-  const getStatusCounts = () => {
+  const statusCounts = useMemo(() => {
     const approved = subscribers.filter(s => s.status === 'approved').length;
     const pending = subscribers.filter(s => s.status === 'pending').length;
     const rejected = subscribers.filter(s => s.status === 'rejected').length;
     return { approved, pending, rejected };
-  };
+  }, [subscribers]);
 
-  // Filtros para associados
+  const discountCounts = useMemo(() => {
+    const total = allDiscounts.length;
+    const active = allDiscounts.filter(d => d.ativo).length;
+    const paused = total - active;
+    return { total, active, paused };
+  }, [allDiscounts]);
+
   const filteredSubscribers = useMemo(() => {
     return subscribers.filter(subscriber => {
-      const matchesSearch = 
-        subscriber.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        subscriber.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        subscriber.cpf.includes(searchTerm) ||
-        subscriber.phone.includes(searchTerm);
-      
+      const lowerSearch = searchTerm.toLowerCase();
+      const matchesSearch =
+        (subscriber.name?.toLowerCase().includes(lowerSearch) || false) ||
+        (subscriber.email?.toLowerCase().includes(lowerSearch) || false) ||
+        (subscriber.cpf?.includes(searchTerm) || false) ||
+        (subscriber.phone?.includes(searchTerm) || false);
       const matchesStatus = statusFilter === "all" || subscriber.status === statusFilter;
-      
       return matchesSearch && matchesStatus;
     });
   }, [subscribers, searchTerm, statusFilter]);
 
-  // Filtros para parceiros
   const filteredPartners = useMemo(() => {
     return partners.filter(partner => {
+      const lowerSearch = searchTerm.toLowerCase();
       return (
-        partner.estabelecimento.toLowerCase().includes(partnerSearchTerm.toLowerCase()) ||
-        partner.responsavel.toLowerCase().includes(partnerSearchTerm.toLowerCase()) ||
-        partner.email.toLowerCase().includes(partnerSearchTerm.toLowerCase()) ||
-        partner.telefone.includes(partnerSearchTerm)
+        (partner.nome_estabelecimento?.toLowerCase().includes(lowerSearch) || false) ||
+        (partner.responsavel?.toLowerCase().includes(lowerSearch) || false) ||
+        (partner.email?.toLowerCase().includes(lowerSearch) || false) ||
+        (partner.telefone?.includes(searchTerm) || false)
       );
     });
-  }, [partners, partnerSearchTerm]);
+  }, [partners, searchTerm]);
 
-  // Filtros para leads
   const filteredLeads = useMemo(() => {
     return leads.filter(lead => {
+      const lowerSearch = searchTerm.toLowerCase();
       return (
-        lead.nome_completo.toLowerCase().includes(leadSearchTerm.toLowerCase()) ||
-        lead.email.toLowerCase().includes(leadSearchTerm.toLowerCase()) ||
-        lead.telefone.includes(leadSearchTerm)
+        (lead.nome_completo?.toLowerCase().includes(lowerSearch) || false) ||
+        (lead.email?.toLowerCase().includes(lowerSearch) || false) ||
+        (lead.telefone?.includes(searchTerm) || false)
       );
     });
-  }, [leads, leadSearchTerm]);
+  }, [leads, searchTerm]);
 
-  const copyLandingPageUrl = () => {
-    const url = `${window.location.origin}/lp`;
-    navigator.clipboard.writeText(url);
-    toast({ title: "Link copiado!", description: url });
-  };
+  const filteredDiscounts = useMemo(() => {
+    return allDiscounts.filter(discount => {
+      const partner = partners.find(p => p.id === discount.partner_id);
+      const partnerName = partner?.nome_estabelecimento || (partner as any)?.estabelecimento || "";
+      const lowerSearch = searchTerm.toLowerCase();
 
-  // Exportar para Excel
-  const exportToExcel = () => {
-    // Preparar dados de associados (com dados sensíveis mascarados)
-    const subscribersData = filteredSubscribers.map(s => ({
-      Nome: s.name,
-      Email: s.email,
-      Telefone: s.phone,
-      CPF: maskCPF(s.cpf),
-      Endereço: s.address,
-      Status: getStatusLabel(s.status),
-      Desconto: s.discount_applied ? "5% aplicado" : "Sem desconto",
-      "Data Pagamento": s.paid_at ? formatDate(s.paid_at) : "-",
-      "Data Cadastro": formatDate(s.created_at),
-    }));
-
-    // Preparar dados de parceiros
-    const partnersData = filteredPartners.map(p => ({
-      Estabelecimento: p.estabelecimento,
-      Responsável: p.responsavel,
-      Telefone: p.telefone,
-      Email: p.email,
-      Endereço: p.endereco,
-      "Data Cadastro": formatDate(p.created_at),
-    }));
-
-    // Criar workbook
-    const wb = XLSX.utils.book_new();
-    
-    // Adicionar planilha de associados
-    const wsSubscribers = XLSX.utils.json_to_sheet(subscribersData);
-    XLSX.utils.book_append_sheet(wb, wsSubscribers, "Associados");
-    
-    // Adicionar planilha de parceiros
-    const wsPartners = XLSX.utils.json_to_sheet(partnersData);
-    XLSX.utils.book_append_sheet(wb, wsPartners, "Parceiros");
-
-    // Gerar arquivo e download
-    const date = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb, `ClubeAquiTem_Dados_${date}.xlsx`);
-
-    toast({
-      title: "Exportação concluída",
-      description: "Os dados foram exportados para Excel com sucesso.",
+      return (
+        (discount.titulo?.toLowerCase().includes(lowerSearch) || false) ||
+        (discount.descricao?.toLowerCase().includes(lowerSearch) || false) ||
+        partnerName.toLowerCase().includes(lowerSearch)
+      );
     });
+  }, [allDiscounts, partners, searchTerm]);
+
+  const filteredSellers = useMemo(() => {
+    return sellers.filter(seller => {
+      const lowerSearch = searchTerm.toLowerCase();
+      return (
+        (seller.name?.toLowerCase().includes(lowerSearch) || false) ||
+        (seller.email?.toLowerCase().includes(lowerSearch) || false) ||
+        (seller.phone?.toLowerCase().includes(lowerSearch) || false) ||
+        (seller.slug?.toLowerCase().includes(lowerSearch) || false)
+      );
+    });
+  }, [sellers, searchTerm]);
+
+  const handleCreateSeller = async (data: any) => {
+    try {
+      const slug = data.slug || generateSlug(data.name);
+
+      // Verificar se slug já existe
+      const { data: existing } = await supabase.from('sellers').select('id').eq('slug', slug).maybeSingle();
+      if (existing) {
+        toast({ title: "Slug em uso", description: "Este nome já está sendo usado para um link de vendedor. Tente outro.", variant: "destructive" });
+        return;
+      }
+
+      if (!data.password || data.password.length < 6) {
+        toast({ title: "Senha obrigatória", description: "Defina uma senha de pelo menos 6 caracteres.", variant: "destructive" });
+        return;
+      }
+
+      const hashedPassword = await hashPassword(data.password);
+
+      const { error } = await supabase.from('sellers').insert([{
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        slug: slug,
+        status: 'active',
+        password_hash: hashedPassword
+      }]);
+      if (error) throw error;
+      toast({ title: "Sucesso", description: "Vendedor cadastrado com sucesso." });
+      fetchData();
+      setIsCreateDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message || "Falha ao cadastrar vendedor.", variant: "destructive" });
+    }
   };
 
-  const statusCounts = getStatusCounts();
+  const handleUpdateSeller = async (id: string, updates: any) => {
+    try {
+      const sellerData: any = {
+        name: updates.name,
+        email: updates.email,
+        phone: updates.phone,
+        slug: updates.slug,
+        status: updates.status
+      };
+
+      if (updates.password && updates.password.length >= 6) {
+        sellerData.password_hash = await hashPassword(updates.password);
+      }
+
+      const { error } = await supabase.from('sellers').update(sellerData).eq('id', id);
+      if (error) throw error;
+      toast({ title: "Sucesso", description: "Vendedor atualizado com sucesso." });
+      fetchData();
+      setIsSellerDialogOpen(false);
+      setIsEditing(false);
+    } catch (error) {
+      toast({ title: "Erro", description: "Falha ao atualizar vendedor.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteSeller = async (id: string) => {
+    askConfirmation(
+      "Remover Vendedor?",
+      "Todos os vínculos com este vendedor serão perdidos.",
+      async () => {
+        const { error } = await supabase.from('sellers').delete().eq('id', id);
+        if (error) throw error;
+        toast({ title: "Removido", description: "Vendedor excluído com sucesso." });
+        fetchData();
+      }
+    );
+  };
+
+  const exportToExcel = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // Associados Sheet
+      const subscribersData = subscribers.map(s => ({
+        Nome: s.name,
+        Email: s.email,
+        Telefone: s.phone,
+        CPF: s.cpf,
+        Status: s.status,
+        Cadastro: formatDate(s.created_at),
+      }));
+      const wsSubscribers = XLSX.utils.json_to_sheet(subscribersData);
+      XLSX.utils.book_append_sheet(wb, wsSubscribers, "Associados");
+
+      // Leads Sheet
+      const leadsData = leads.map(l => ({
+        Nome: l.nome_completo,
+        Email: l.email,
+        Telefone: l.telefone,
+        Origem: l.source || "Meta Ads",
+        Cadastro: formatDate(l.created_at),
+      }));
+      const wsLeads = XLSX.utils.json_to_sheet(leadsData);
+      XLSX.utils.book_append_sheet(wb, wsLeads, "Leads");
+
+      // Parceiros Sheet
+      const partnersData = partners.map(p => ({
+        Estabelecimento: p.nome_estabelecimento || (p as any).estabelecimento || "N/A",
+        Responsável: p.responsavel,
+        Email: p.email,
+        Telefone: p.telefone,
+        Status: p.status === 'active' || p.status === 'approved' ? 'Ativo' : 'Pendente',
+        Cadastro: formatDate(p.created_at),
+      }));
+      const wsPartners = XLSX.utils.json_to_sheet(partnersData);
+      XLSX.utils.book_append_sheet(wb, wsPartners, "Parceiros");
+
+      XLSX.writeFile(wb, `Relatorio_Global_Clube_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+      toast({ title: "Sucesso!", description: "Relatório global gerado com sucesso." });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({ title: "Erro!", description: "Falha ao gerar o relatório consolidado.", variant: "destructive" });
+    }
+  };
+
+  const handleDownloadLeadTemplate = () => {
+    const template = [
+      {
+        nome_completo: "Nome do Lead",
+        email: "email@exemplo.com",
+        telefone: "21999999999",
+        source: "Importação Massa",
+        notes: "Interessado em plano familiar"
+      }
+    ];
+    const ws = XLSX.utils.json_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "Modelo_Importacao_Leads.xlsx");
+  };
+
+  const handleImportLeads = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        if (jsonData.length === 0) {
+          toast({ title: "Erro", description: "O arquivo está vazio.", variant: "destructive" });
+          return;
+        }
+
+        const formattedLeads = jsonData.map((item: any) => ({
+          nome_completo: item.nome_completo || item.Nome || item["Nome do Lead"] || "",
+          email: item.email || item.Email || "",
+          telefone: String(item.telefone || item.Telefone || ""),
+          source: item.source || item.Origem || "Importação Massa",
+          notes: item.notes || item.Notas || "",
+          converted: false
+        })).filter(lead => lead.nome_completo && (lead.email || lead.telefone));
+
+        if (formattedLeads.length === 0) {
+          toast({ title: "Erro", description: "Nenhum lead válido encontrado. Verifique os campos nome e email/telefone.", variant: "destructive" });
+          return;
+        }
+
+        const { error } = await supabase.from('leads').insert(formattedLeads);
+        if (error) throw error;
+
+        toast({ title: "Sucesso!", description: `${formattedLeads.length} leads importados com sucesso.` });
+        fetchData();
+      } catch (error) {
+        console.error("Import error:", error);
+        toast({ title: "Erro!", description: "Falha ao processar a planilha. Verifique o formato.", variant: "destructive" });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    event.target.value = '';
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Carregando...</p>
+      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground font-medium">Sincronizando painel...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="container mx-auto px-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <h1 className="text-4xl font-bold text-primary">Painel Administrativo</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={exportToExcel}>
-              <Download className="mr-2 h-4 w-4" />
-              Exportar Excel
-            </Button>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
-          </div>
+    <div className="min-h-screen flex flex-col bg-[#F9FAFB]">
+      <SEO title="Admin - Clube Aqui Tem" description="Painel administrativo oficial." />
+      <Header />
+
+      {/* Hero Section */}
+      <section className="pt-32 pb-24 bg-primary relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white rounded-full blur-[120px] translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent rounded-full blur-[100px] -translate-x-1/2 translate-y-1/2"></div>
         </div>
 
-        {/* Links Externos */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ExternalLink className="h-5 w-5" />
-              Links Rápidos
-            </CardTitle>
-            <CardDescription>
-              Acesse rapidamente as plataformas dos associados
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              {EXTERNAL_LINKS.map((link) => {
-                const IconComponent = link.icon;
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-white text-sm font-medium mb-4 border border-white/20">
+                <LayoutDashboard className="w-4 h-4 text-accent" />
+                Master Admin Dashboard
+              </div>
+              <h1 className="text-4xl md:text-5xl font-brand font-bold text-white mb-2">Painel de Controle</h1>
+              <p className="text-primary-foreground/80 text-lg">Gerencie associados, parceiros e leads em tempo real.</p>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                className="bg-white/5 border-white/20 text-white hover:bg-white hover:text-primary h-14 px-8 rounded-2xl transition-all"
+                onClick={exportToExcel}
+              >
+                <Download className="w-5 h-5 mr-3" />
+                Relatório Global
+              </Button>
+              <Button variant="hero" className="h-14 px-8 rounded-2xl shadow-xl shadow-accent/20" onClick={handleLogout}>
+                <LogOut className="w-5 h-5 mr-3" />
+                Sair
+              </Button>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      <main className="flex-grow container mx-auto px-4 -mt-12 pb-24 relative z-20">
+        <div className="max-w-7xl mx-auto space-y-12">
+
+          {/* Internal Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 items-stretch">
+            {[
+              { label: "Associados Totais", value: totals.subscribers, icon: Users, color: "bg-blue-500", shadow: "shadow-blue-500/20" },
+              { label: "Vendedores Ativos", value: totals.sellers, icon: UserPlus, color: "bg-purple-500", shadow: "shadow-purple-500/20" },
+              { label: "Parceiros Ativos", value: totals.partners, icon: Store, color: "bg-indigo-500", shadow: "shadow-indigo-500/20" },
+              { label: "Leads Pendentes", value: totals.leads, icon: Target, color: "bg-orange-500", shadow: "shadow-orange-500/20" },
+              {
+                label: "Descontos Locais",
+                value: discountCounts.total,
+                subValue: `${discountCounts.active} Ativos / ${discountCounts.paused} Pausados`,
+                icon: Tag,
+                color: "bg-accent",
+                shadow: "shadow-accent/20"
+              }
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="h-full flex flex-col"
+              >
+                <Card className={`border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-white hover:scale-[1.02] transition-all h-full min-h-[160px]`}>
+                  <CardContent className="p-8 h-full flex flex-col justify-center">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`w-14 h-14 ${stat.color} rounded-2xl flex items-center justify-center text-white shadow-lg ${stat.shadow}`}>
+                        <stat.icon className="w-7 h-7" />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">{stat.label}</p>
+                        <h3 className="text-3xl font-brand font-black text-primary">{stat.value}</h3>
+                        {stat.subValue && <p className="text-[10px] font-bold text-accent mt-1">{stat.subValue}</p>}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Quick Links Section */}
+          <section>
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+                <ExternalLink className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-3xl font-brand font-bold text-primary">Acessos Rápidos</h2>
+                <p className="text-muted-foreground">Plataformas e ferramentas externas</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+              {EXTERNAL_LINKS.map((link, i) => {
+                if (link.id === 'update-coupons') {
+                  return (
+                    <motion.button
+                      key={link.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.2 + i * 0.1 }}
+                      className={`${link.color} h-full min-h-[96px] rounded-3xl flex flex-col items-center justify-center text-white font-bold gap-2 shadow-xl hover:translate-y-[-5px] transition-all w-full`}
+                      onClick={async () => {
+                        if (isUpdatingCoupons) return;
+                        setIsUpdatingCoupons(true);
+
+                        toast({
+                          title: "Atualização Iniciada",
+                          description: "O robô está coletando novas ofertas em 2º plano...",
+                          className: "bg-blue-600 text-white border-none"
+                        });
+
+                        try {
+                          // Tenta chamar o servidor local Node.js (ou produção se estiver na mesma origem)
+                          const response = await fetch('http://localhost:3000/api/scrape-coupons', { method: 'POST' });
+
+                          if (!response.ok) {
+                            // Se falhar localhost, tenta via Supabase Edge Function (caso esteja em prod)
+                            const { error } = await supabase.functions.invoke('scrape-coupons');
+                            if (error) throw error;
+                          }
+
+                          toast({ title: "Sucesso", description: "Cupons atualizados!", className: "bg-green-600 text-white border-none" });
+                          fetchData();
+                        } catch (error) {
+                          console.error("Erro script:", error);
+                          toast({ title: "Info", description: "Comando enviado. Aguarde alguns instantes.", className: "bg-blue-600 text-white border-none" });
+                        } finally {
+                          // Delay pequeno para UX (não piscar muito rapido se for cacheado)
+                          setTimeout(() => setIsUpdatingCoupons(false), 2000);
+                        }
+                      }}
+                    >
+                      <div className="flex flex-col items-center">
+                        {isUpdatingCoupons ? (
+                          <div className="w-6 h-6 mb-2 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <link.icon className="w-6 h-6 mb-2 animate-pulse" />
+                        )}
+
+                        <span className="text-xs uppercase tracking-widest mb-1">
+                          {isUpdatingCoupons ? "Atualizando..." : link.name}
+                        </span>
+
+                        {couponStats.total > 0 && !isUpdatingCoupons && (
+                          <div className="flex flex-col items-center text-[10px] opacity-90 font-medium">
+                            <span>{couponStats.total} Ofertas Ativas</span>
+                            {couponStats.lastUpdate && (
+                              <span className="text-[9px] opacity-75">
+                                {new Date(couponStats.lastUpdate).toLocaleString('pt-BR')}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </motion.button>
+                  )
+                }
                 return (
-                  <a
+                  <motion.a
                     key={link.id}
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors ${link.color}`}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 + i * 0.1 }}
+                    className={`${link.color} h-full min-h-[96px] rounded-3xl flex flex-col items-center justify-center text-white font-bold gap-2 shadow-xl hover:translate-y-[-5px] transition-all`}
                   >
-                    <IconComponent className="h-5 w-5" />
-                    {link.name}
-                  </a>
-                );
+                    <link.icon className="w-6 h-6" />
+                    <span className="text-xs uppercase tracking-widest">{link.name}</span>
+                  </motion.a>
+                )
               })}
             </div>
-          </CardContent>
-        </Card>
+          </section>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Associados</p>
-                  <p className="text-2xl font-bold">{subscribers.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Pagos</p>
-                  <p className="text-2xl font-bold text-green-600">{statusCounts.approved}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Pendentes</p>
-                  <p className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center">
-                  <Store className="w-6 h-6 text-accent" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Parceiros</p>
-                  <p className="text-2xl font-bold">{partners.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-orange-500/10 rounded-full flex items-center justify-center">
-                  <Target className="w-6 h-6 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Leads</p>
-                  <p className="text-2xl font-bold text-orange-600">{leads.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="subscribers" className="w-full">
-          <TabsList className="grid w-full md:w-[500px] grid-cols-3">
-            <TabsTrigger value="subscribers">
-              <CreditCard className="mr-2 h-4 w-4" />
-              Associados
-            </TabsTrigger>
-            <TabsTrigger value="leads">
-              <Target className="mr-2 h-4 w-4" />
-              Leads
-            </TabsTrigger>
-            <TabsTrigger value="partners">
-              <Store className="mr-2 h-4 w-4" />
-              Parceiros
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="subscribers" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Associados e Status de Pagamento</CardTitle>
-                <CardDescription>
-                  Mostrando {filteredSubscribers.length} de {subscribers.length} associado(s)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* Filtros e Busca */}
-                <div className="flex flex-col md:flex-row gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          {/* Main Data Section */}
+          <section>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-4 rounded-3xl shadow-xl border border-border">
+                <TabsList className="bg-muted/50 p-1 rounded-2xl">
+                  <TabsTrigger value="subscribers" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />
+                    Associados
+                    {searchTerm && <Badge variant="secondary" className="ml-1 px-1.5 h-5 min-w-[20px] text-[10px] bg-white/20 text-inherit border-none">{filteredSubscribers.length}</Badge>}
+                  </TabsTrigger>
+                  <TabsTrigger value="leads" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    Leads
+                    {searchTerm && <Badge variant="secondary" className="ml-1 px-1.5 h-5 min-w-[20px] text-[10px] bg-white/20 text-inherit border-none">{filteredLeads.length}</Badge>}
+                  </TabsTrigger>
+                  <TabsTrigger value="partners" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                    <Store className="w-4 h-4" />
+                    Parceiros
+                    {searchTerm && <Badge variant="secondary" className="ml-1 px-1.5 h-5 min-w-[20px] text-[10px] bg-white/20 text-inherit border-none">{filteredPartners.length}</Badge>}
+                  </TabsTrigger>
+                  <TabsTrigger value="sellers" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Vendedores
+                    {searchTerm && <Badge variant="secondary" className="ml-1 px-1.5 h-5 min-w-[20px] text-[10px] bg-white/20 text-inherit border-none">{filteredSellers.length}</Badge>}
+                  </TabsTrigger>
+                  <TabsTrigger value="discounts" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                    <Tag className="w-4 h-4" />
+                    Descontos (Geral)
+                    {searchTerm && <Badge variant="secondary" className="ml-1 px-1.5 h-5 min-w-[20px] text-[10px] bg-white/20 text-inherit border-none">{filteredDiscounts.length}</Badge>}
+                  </TabsTrigger>
+                  <TabsTrigger value="companies" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Empresas B2B
+                  </TabsTrigger>
+                </TabsList>
+                <div className="flex items-center gap-4">
+                  <div className="relative group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <Input
-                      placeholder="Buscar por nome, email, CPF ou telefone..."
+                      placeholder="Busca global..."
+                      className="h-12 pl-12 w-[300px] rounded-2xl border-border bg-[#F9FAFB] focus:bg-white transition-all"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Filtrar por status" />
-                      </SelectTrigger>
+                </div>
+              </div>
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full"
+                >
+                  <TabsContent value="subscribers" className="m-0 focus-visible:outline-none">
+                    <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white">
+                      <div className="bg-primary/5 p-8 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <h3 className="text-2xl font-brand font-bold text-primary">Controle de Assinantes</h3>
+                            <p className="text-sm text-muted-foreground">Mostrando {searchTerm ? filteredSubscribers.length : totals.subscribers} associados</p>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setCreateType("subscriber");
+                              setFormData({ status: 'approved' });
+                              setIsCreateDialogOpen(true);
+                            }}
+                            className="bg-primary text-white hover:bg-primary/90 h-10 px-4 rounded-xl flex items-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Novo Associado
+                          </Button>
+                        </div>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className="w-[180px] h-12 rounded-xl">
+                            <SelectValue placeholder="Filtrar Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos os Status</SelectItem>
+                            <SelectItem value="approved">Ativos</SelectItem>
+                            <SelectItem value="pending">Pendentes</SelectItem>
+                            <SelectItem value="rejected">Cancelados</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader className="bg-muted/30">
+                              <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">NOME COMPLETO</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">CPF</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">LOCALIZAÇÃO</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">ORIGEM</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">STATUS</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-right">AÇÕES</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredSubscribers.map((item) => (
+                                <TableRow
+                                  key={item.id}
+                                  className="hover:bg-muted/10 border-border/50 group cursor-pointer transition-colors"
+                                  onClick={() => {
+                                    setSelectedSubscriber(item);
+                                    setIsSubscriberDialogOpen(true);
+                                  }}
+                                >
+                                  <TableCell className="py-6 px-8">
+                                    <div className="flex flex-col">
+                                      <span className="font-bold text-primary">{item.name}</span>
+                                      <span className="text-xs text-muted-foreground">{item.email}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-6 px-8 font-medium text-xs font-mono">{formatCPF(item.cpf)}</TableCell>
+                                  <TableCell className="py-6 px-8">
+                                    <span className="text-xs text-muted-foreground block truncate max-w-[200px]">{item.address}</span>
+                                  </TableCell>
+                                  <TableCell className="py-6 px-8">
+                                    <span className="text-xs font-bold text-primary">
+                                      {item.seller_id
+                                        ? `Vendedor: ${sellers.find(s => s.id === item.seller_id)?.name || "N/A"}`
+                                        : (item.source || "Direto")}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="py-6 px-8">{getStatusBadge(item.status)}</TableCell>
+                                  <TableCell className="py-6 px-8 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="group-hover:text-primary transition-colors"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedSubscriber(item);
+                                          setEditData({ ...item });
+                                          setIsEditing(true);
+                                          setIsSubscriberDialogOpen(true);
+                                        }}
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-red-400 hover:text-red-600 transition-colors"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteSubscriber(item.id);
+                                        }}
+                                      >
+                                        <Trash className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="group-hover:text-primary transition-colors"
+                                        onClick={() => {
+                                          setSelectedSubscriber(item);
+                                          setIsEditing(false);
+                                          setIsSubscriberDialogOpen(true);
+                                        }}
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="leads" className="m-0 focus-visible:outline-none">
+                    <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white">
+                      <div className="p-8 border-b border-border bg-orange-50/50">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-4">
+                            <div>
+                              <h3 className="text-2xl font-brand font-bold text-orange-800">Leads & Captação</h3>
+                              <p className="text-sm text-orange-600/70">Originados de Campanhas Meta Ads</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => {
+                                  setCreateType("lead");
+                                  setFormData({ source: 'Manual' });
+                                  setIsCreateDialogOpen(true);
+                                }}
+                                className="bg-orange-600 text-white hover:bg-orange-700 h-10 px-4 rounded-xl flex items-center gap-2 shadow-lg shadow-orange-600/20"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Novo Lead
+                              </Button>
+
+                              <Button
+                                variant="outline"
+                                onClick={handleDownloadLeadTemplate}
+                                className="border-orange-200 text-orange-700 hover:bg-orange-100 h-10 px-4 rounded-xl flex items-center gap-2"
+                              >
+                                <FileSpreadsheet className="w-4 h-4" />
+                                <span className="hidden sm:inline">Baixar Modelo</span>
+                              </Button>
+
+                              <label className="cursor-pointer">
+                                <div className="bg-white border border-orange-200 text-orange-700 hover:bg-orange-100 h-10 px-4 rounded-xl flex items-center gap-2 transition-colors">
+                                  <Download className="w-4 h-4 rotate-180" />
+                                  <span className="hidden sm:inline">Importar Lista</span>
+                                </div>
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  accept=".xlsx, .xls, .csv"
+                                  onChange={handleImportLeads}
+                                />
+                              </label>
+                            </div>
+                          </div>
+                          <div className="bg-orange-100 text-orange-700 px-4 py-2 rounded-2xl font-bold text-sm text-center">
+                            {searchTerm ? filteredLeads.length : totals.leads} Registros Totais
+                          </div>
+                        </div>
+                      </div>
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader className="bg-muted/30">
+                              <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">POTENCIAL CLIENTE</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-center">CONTATO</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-right">AÇÕES</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredLeads.map((lead) => (
+                                <TableRow
+                                  key={lead.id}
+                                  className="hover:bg-orange-50/20 border-border/50 cursor-pointer transition-colors group"
+                                  onClick={() => {
+                                    setSelectedLead(lead);
+                                    setIsLeadDialogOpen(true);
+                                  }}
+                                >
+                                  <TableCell className="py-6 px-8 font-bold text-primary">{lead.nome_completo}</TableCell>
+                                  <TableCell className="py-6 px-8 text-center">
+                                    <div className="flex flex-col items-center">
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); openWhatsApp(lead.telefone); }}
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-green-600 transition-colors"
+                                      >
+                                        <MessageSquare className="w-3 h-3" />
+                                        {lead.telefone}
+                                      </button>
+                                      <span className="text-[10px] text-muted-foreground/60">{lead.email}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-6 px-8 text-right">
+                                    <div className="flex items-center justify-end gap-3">
+                                      <Badge variant="outline" className="hidden sm:inline-flex text-[9px] font-black uppercase tracking-[2px]">{lead.source || "Meta Ads"}</Badge>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-orange-600 transition-colors"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedLead(lead);
+                                          setEditData({ ...lead });
+                                          setIsEditing(true);
+                                          setIsLeadDialogOpen(true);
+                                        }}
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-red-400 hover:text-red-600 transition-colors"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteLead(lead.id);
+                                        }}
+                                      >
+                                        <Trash className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="group-hover:text-orange-600 transition-colors"
+                                        onClick={() => {
+                                          setSelectedLead(lead);
+                                          setIsEditing(false);
+                                          setIsLeadDialogOpen(true);
+                                        }}
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="partners" className="m-0 focus-visible:outline-none">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                      <div className="flex items-center gap-4 text-left">
+                        <div>
+                          <h2 className="text-3xl font-brand font-bold text-primary">Parceiros Comerciais</h2>
+                          <p className="text-muted-foreground">Rede de estabelecimentos conveniados</p>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setCreateType("partner");
+                            setFormData({ status: 'active' });
+                            setIsCreateDialogOpen(true);
+                          }}
+                          className="bg-primary text-white hover:bg-primary/90 h-10 px-4 rounded-xl flex items-center gap-2"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Novo Parceiro
+                        </Button>
+                      </div>
+                      <div className="bg-primary/10 text-primary px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest">
+                        {searchTerm ? filteredPartners.length : totals.partners} Parceiros registrados
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
+                      {filteredPartners.length === 0 ? (
+                        <Card className="md:col-span-2 lg:col-span-3 p-12 text-center border-dashed border-2 bg-muted/20">
+                          <Store className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                          <p className="text-muted-foreground">Nenhum parceiro encontrado.</p>
+                        </Card>
+                      ) : (
+                        filteredPartners.map((partner) => (
+                          <Card key={partner.id} className="border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-white hover:scale-[1.02] transition-all h-full flex flex-col">
+                            <div className="bg-muted/30 p-8 flex justify-center border-b">
+                              {partner.logo_url ? (
+                                <img src={partner.logo_url} alt="" className="h-16 w-32 object-contain" />
+                              ) : (
+                                <div className="h-16 w-32 bg-white rounded-2xl flex items-center justify-center border border-dashed text-muted-foreground/30">
+                                  <ImageIcon size={32} />
+                                </div>
+                              )}
+                            </div>
+                            <CardContent className="p-8 space-y-4 relative">
+                              <div className="flex justify-between items-start gap-4">
+                                <h4 className="text-lg font-brand font-black text-primary uppercase tracking-tight leading-tight">
+                                  {partner.nome_estabelecimento || (partner as any).estabelecimento || "Sem Nome"}
+                                </h4>
+                                <Badge className={`${partner.status === 'active' || partner.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} border-none text-[8px] font-black uppercase px-2 py-0.5 mt-1`}>
+                                  {partner.status === 'active' || partner.status === 'approved' ? 'Ativo' : 'Pendente'}
+                                </Badge>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <Users className="w-4 h-4 text-accent" />
+                                  <span>Resp: <strong className="text-primary">{partner.responsavel}</strong></span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <Phone className="w-4 h-4 text-accent" />
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openWhatsApp(partner.telefone); }}
+                                    className="hover:text-green-600 transition-colors font-medium flex items-center gap-1"
+                                  >
+                                    {partner.telefone}
+                                    <ExternalLink className="w-2 h-2" />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 w-full mt-4">
+                                <Button
+                                  variant="ghost"
+                                  className="flex-1 text-[10px] font-bold gap-2 hover:bg-accent/10 hover:text-accent"
+                                  onClick={() => {
+                                    setSelectedPartner(partner);
+                                    setIsEditing(false);
+                                    setIsPartnerDialogOpen(true);
+                                    loadPartnerDiscounts(partner.id);
+                                  }}
+                                >
+                                  <Eye size={14} />
+                                  Gerir
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  className="flex-1 text-[10px] font-bold gap-2 hover:bg-blue-50 hover:text-blue-600"
+                                  onClick={() => {
+                                    setSelectedPartner(partner);
+                                    setEditData({ ...partner });
+                                    setIsEditing(true);
+                                    setIsPartnerDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit size={14} />
+                                  Editar
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  className="px-3 h-9 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                  onClick={() => handleDeletePartner(partner.id)}
+                                >
+                                  <Trash size={14} />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="sellers" className="m-0 focus-visible:outline-none">
+                    <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white">
+                      <div className="p-8 border-b border-border bg-purple-50/50">
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                          <div className="flex items-center gap-4">
+                            <div>
+                              <h3 className="text-2xl font-brand font-bold text-purple-800">Equipe de Vendas</h3>
+                              <p className="text-sm text-purple-600/70">Gestão de vendedores e links de indicação</p>
+                            </div>
+                            <Button
+                              onClick={() => {
+                                setCreateType("seller" as any);
+                                setFormData({ status: 'active' });
+                                setIsCreateDialogOpen(true);
+                              }}
+                              className="bg-purple-600 text-white hover:bg-purple-700 h-10 px-4 rounded-xl flex items-center gap-2 shadow-lg shadow-purple-600/20"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Novo Vendedor
+                            </Button>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <div className="bg-white border border-purple-200 text-purple-800 px-6 py-2 rounded-2xl shadow-sm">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-1">Total Comissões (Mês)</p>
+                              <p className="text-xl font-black">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                                  filteredSellers.reduce((acc, seller) => {
+                                    const approvedSales = subscribers.filter(s => s.seller_id === seller.id && s.status === 'approved').length;
+                                    const rawComm = approvedSales * 19.90 * 0.15;
+                                    const roundedComm = Math.round(rawComm * 100) / 100;
+                                    return acc + roundedComm;
+                                  }, 0)
+                                )}
+                              </p>
+                            </div>
+                            <div className="bg-purple-100 text-purple-700 px-4 py-2 rounded-2xl font-bold text-sm">
+                              {searchTerm ? filteredSellers.length : totals.sellers} Ativos
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader className="bg-muted/30">
+                              <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-primary">VENDEDOR</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-primary">LINK DE VENDA</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-center text-primary">PERFORMANCE</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-primary">COMISSÃO A PAGAR</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-right text-primary">AÇÕES</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredSellers.map((seller) => {
+                                const sellerSales = subscribers.filter(s => s.seller_id === seller.id).length;
+                                const approvedSales = subscribers.filter(s => s.seller_id === seller.id && s.status === 'approved').length;
+                                const sellerLeads = leads.filter(l => l.seller_id === seller.id).length;
+                                const saleLink = `${window.location.origin}/?ref=${seller.slug}`;
+                                const rawCommission = approvedSales * 19.90 * 0.15;
+                                const commission = Math.round(rawCommission * 100) / 100;
+
+                                return (
+                                  <TableRow key={seller.id} className="hover:bg-purple-50/20 border-border/50 transition-colors group">
+                                    <TableCell className="py-6 px-8">
+                                      <div className="flex flex-col">
+                                        <span className="font-bold text-primary">{seller.name}</span>
+                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+                                          <Mail className="w-3 h-3" /> {seller.email}
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-6 px-8">
+                                      <div className="flex items-center gap-2">
+                                        <code className="bg-muted px-3 py-1.5 rounded-lg text-[10px] font-mono border border-border/50 text-muted-foreground truncate max-w-[200px]">
+                                          {saleLink}
+                                        </code>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 text-purple-600 hover:bg-purple-50"
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(saleLink);
+                                            toast({ title: "Copiado!", description: "Link de venda copiado para a área de transferência." });
+                                          }}
+                                        >
+                                          <Copy className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 text-green-600 hover:bg-green-50"
+                                          onClick={() => openWhatsApp(seller.phone)}
+                                        >
+                                          <MessageSquare className="w-3.5 h-3.5" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-6 px-8 text-center">
+                                      <div className="grid grid-cols-2 gap-2 text-xs">
+                                        <div className="bg-blue-50 p-2 rounded-lg" title="Leads capturados via formulário">
+                                          <p className="font-black text-blue-700">{sellerLeads}</p>
+                                          <p className="text-[9px] text-blue-600/70">LEADS FORM</p>
+                                        </div>
+                                        <div className="bg-green-50 p-2 rounded-lg" title="Cliques no botão WhatsApp">
+                                          <p className="font-black text-green-700">{sellerMetrics[seller.id]?.whatsapp || 0}</p>
+                                          <p className="text-[9px] text-green-600/70">WHATSAPP</p>
+                                        </div>
+                                        <div className="bg-orange-50 p-2 rounded-lg" title="Intenções de Venda (Botão Comprar)">
+                                          <p className="font-black text-orange-700">{sellerMetrics[seller.id]?.checkout || 0}</p>
+                                          <p className="text-[9px] text-orange-600/70">INTENÇÃO</p>
+                                        </div>
+                                        <div className="bg-purple-50 p-2 rounded-lg" title="Vendas Confirmadas">
+                                          <p className="font-black text-purple-700">{approvedSales} <span className="text-purple-400/60 text-[8px]">/ {sellerSales}</span></p>
+                                          <p className="text-[9px] text-purple-600/70">ATIVAS</p>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-6 px-8">
+                                      <div className="bg-green-50 border border-green-100 rounded-xl p-3 inline-flex flex-col min-w-[100px]">
+                                        <span className="text-[9px] font-bold text-green-600/70 uppercase tracking-wider">A Receber</span>
+                                        <span className="text-lg font-black text-green-700">
+                                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commission)}
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-6 px-8 text-right">
+                                      <div className="flex items-center justify-end gap-2">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="text-primary hover:bg-muted"
+                                          onClick={() => {
+                                            setSelectedSeller(seller);
+                                            setEditData({ ...seller, password: '' });
+                                            setIsEditing(true);
+                                            setIsSellerDialogOpen(true);
+                                          }}
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="text-red-400 hover:text-red-600"
+                                          onClick={() => handleDeleteSeller(seller.id)}
+                                        >
+                                          <Trash className="w-4 h-4" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  {/* Modal de Edição de Vendedor */}
+                  <Dialog open={isSellerDialogOpen} onOpenChange={setIsSellerDialogOpen}>
+                    <DialogContent className="max-w-xl rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white text-primary">
+                      {selectedSeller && (
+                        <>
+                          <div className="bg-purple-600 p-8 text-white relative">
+                            <div className="absolute top-0 right-0 p-8 opacity-10">
+                              <UserCog size={100} />
+                            </div>
+                            <DialogTitle className="text-2xl font-brand font-black relative z-10">Editar Vendedor</DialogTitle>
+                            <DialogDescription className="text-white/70 relative z-10">Atualizar dados e credenciais</DialogDescription>
+                          </div>
+                          <div className="p-8 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Nome</Label>
+                                <Input value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>WhatsApp</Label>
+                                <Input value={editData.phone} onChange={e => setEditData({ ...editData, phone: e.target.value })} />
+                              </div>
+                              <div className="space-y-2 md:col-span-2">
+                                <Label>E-mail (Login)</Label>
+                                <Input value={editData.email} onChange={e => setEditData({ ...editData, email: e.target.value })} />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Slug (Link)</Label>
+                                <Input value={editData.slug} onChange={e => setEditData({ ...editData, slug: e.target.value })} />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Nova Senha (Opcional)</Label>
+                                <Input
+                                  type="password"
+                                  placeholder="Deixe em branco para manter"
+                                  value={editData.password || ""}
+                                  onChange={e => setEditData({ ...editData, password: e.target.value })}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                              <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => setIsSellerDialogOpen(false)}>Cancelar</Button>
+                              <Button
+                                variant="hero"
+                                className="flex-1 h-12 rounded-xl bg-purple-600 shadow-xl shadow-purple-600/20"
+                                onClick={() => handleUpdateSeller(selectedSeller.id, editData)}
+                              >
+                                Salvar Alterações
+                              </Button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </DialogContent>
+                  </Dialog>
+
+                  <TabsContent value="discounts" className="m-0 focus-visible:outline-none">
+                    <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white">
+                      <div className="bg-primary/5 p-8 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <h3 className="text-2xl font-brand font-bold text-primary">Gestão de Ofertas</h3>
+                            <p className="text-sm text-muted-foreground">Monitoramento global de descontos ativos no clube</p>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setCreateType("discount");
+                              setFormData({ partner_id: '', percentual_desconto: 10 });
+                              setIsCreateDialogOpen(true);
+                            }}
+                            className="bg-accent text-white hover:bg-accent/90 h-10 px-4 rounded-xl flex items-center gap-2 shadow-lg shadow-accent/20"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Nova Oferta
+                          </Button>
+                        </div>
+                        <div className="bg-accent/10 text-accent px-6 py-2 rounded-2xl font-black text-sm uppercase tracking-widest">
+                          {filteredDiscounts.length} Ofertas
+                        </div>
+                      </div>
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader className="bg-muted/30">
+                              <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">PARCEIRO</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">OFERTA</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">VALOR</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-center">STATUS</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-right">AÇÕES</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredDiscounts.map((discount) => (
+                                <TableRow key={discount.id} className="hover:bg-primary/5 border-border/50">
+                                  <TableCell className="py-6 px-8 font-bold text-primary">
+                                    {partners.find(p => p.id === discount.partner_id)?.nome_estabelecimento ||
+                                      (partners.find(p => p.id === discount.partner_id) as any)?.estabelecimento ||
+                                      "Parceiro não encontrado"}
+                                  </TableCell>
+                                  <TableCell className="py-6 px-8">
+                                    <div className="flex flex-col">
+                                      <span className="font-bold text-primary">{discount.titulo}</span>
+                                      <span className="text-xs text-muted-foreground line-clamp-1">{discount.descricao}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-6 px-8">
+                                    <Badge className="bg-accent/10 text-accent border-none font-black text-[10px]">
+                                      -{discount.percentual_desconto}%
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="py-6 px-8 text-center">
+                                    {discount.ativo ? (
+                                      <div className="flex items-center justify-center gap-2 text-green-600 font-bold text-[10px] uppercase">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                        Ativo
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center justify-center gap-2 text-amber-600 font-bold text-[10px] uppercase">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                        Pausado
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="py-6 px-8 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="hover:text-primary transition-colors"
+                                        onClick={() => {
+                                          setSelectedDiscount(discount);
+                                          setEditData({ ...discount });
+                                          setIsEditing(true);
+                                          setIsDiscountDialogOpen(true);
+                                        }}
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-red-400 hover:text-red-600 transition-colors"
+                                        onClick={() => {
+                                          askConfirmation(
+                                            "Remover Oferta?",
+                                            "Deseja excluir este desconto permanentemente?",
+                                            async () => {
+                                              await supabase.from('partner_discounts' as any).delete().eq('id', discount.id);
+                                              fetchData();
+                                              toast({ title: "Removido", description: "Oferta excluída com sucesso." });
+                                            }
+                                          );
+                                        }}
+                                      >
+                                        <Trash className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </motion.div>
+              </AnimatePresence>
+              <TabsContent value="companies">
+                <CompaniesManager subscribers={subscribers} onUpdate={fetchData} />
+              </TabsContent>
+            </Tabs>
+          </section>
+
+        </div>
+      </main >
+
+      <Dialog open={isPartnerDialogOpen} onOpenChange={setIsPartnerDialogOpen}>
+        <DialogContent className="max-w-2xl rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden">
+          {selectedPartner && (
+            <>
+              <div className="bg-primary p-12 text-white relative">
+                <div className="absolute top-0 right-0 p-12 opacity-10">
+                  <Building2 size={120} />
+                </div>
+                <div className="relative z-10 flex items-center gap-6">
+                  <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center p-4 shadow-xl">
+                    {selectedPartner.logo_url ? (
+                      <img src={selectedPartner.logo_url} alt="" className="w-full h-full object-contain" />
+                    ) : (
+                      <Store className="text-primary w-10 h-10" />
+                    )}
+                  </div>
+                  <div>
+                    <DialogTitle className="text-3xl font-brand font-black">{selectedPartner.nome_estabelecimento}</DialogTitle>
+                    <DialogDescription className="text-white/70 text-lg">Detalhes da Parceria Comercial</DialogDescription>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-12 space-y-8 bg-white">
+                {isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Estabelecimento</Label>
+                        <Input value={editData.nome_estabelecimento} onChange={e => setEditData({ ...editData, nome_estabelecimento: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Responsável</Label>
+                        <Input value={editData.responsavel} onChange={e => setEditData({ ...editData, responsavel: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>CNPJ</Label>
+                        <Input value={editData.cnpj} onChange={e => setEditData({ ...editData, cnpj: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select value={editData.status} onValueChange={v => setEditData({ ...editData, status: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Ativo (Aprovado)</SelectItem>
+                            <SelectItem value="pending">Pendente</SelectItem>
+                            <SelectItem value="suspended">Suspenso</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Endereço</Label>
+                        <Input value={editData.endereco} onChange={e => setEditData({ ...editData, endereco: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="md:col-span-2 pt-6 flex gap-4">
+                      <Button variant="outline" className="flex-1 h-14 rounded-2xl" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                      <Button variant="hero" className="flex-1 h-14 rounded-2xl shadow-xl shadow-accent/20" onClick={() => handleUpdatePartner(selectedPartner.id, editData)}>Salvar Alterações</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-6">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Responsável Legal</p>
+                          <div className="flex items-center gap-3 text-primary font-bold">
+                            <Users size={18} className="text-accent" />
+                            {selectedPartner.responsavel}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Contato</p>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-bold">{selectedPartner.telefone}</span>
+                            <span className="text-xs text-muted-foreground">{selectedPartner.email}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-6">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Status da Parceria</p>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${selectedPartner.status === 'active' || selectedPartner.status === 'approved' ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`} />
+                            <span className="font-brand font-black text-primary uppercase text-sm tracking-tighter">
+                              {selectedPartner.status === 'active' || selectedPartner.status === 'approved' ? 'Parceria Ativa' : selectedPartner.status === 'suspended' ? 'Suspensa' : 'Em Análise'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-8 border-t">
+                      <h4 className="text-sm font-black uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-accent" />
+                        Gerenciar Descontos
+                      </h4>
+                      {loadingDiscounts ? (
+                        <div className="flex justify-center py-8"><Loader2 className="animate-spin text-primary" /></div>
+                      ) : partnerDiscounts.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8 border border-dashed rounded-3xl">Este parceiro ainda não cadastrou ofertas.</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {partnerDiscounts.map(discount => (
+                            <div key={discount.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl border border-border">
+                              <div>
+                                <p className="font-bold text-primary">{discount.titulo}</p>
+                                <p className="text-xs text-accent">-{discount.percentual_desconto}% de desconto</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={discount.ativo ? "text-green-600" : "text-amber-600"}
+                                  onClick={() => handleUpdateDiscount(discount.id, { ativo: !discount.ativo })}
+                                >
+                                  {discount.ativo ? "Ativo" : "Pausado"}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-red-400 hover:text-red-600"
+                                  onClick={() => {
+                                    askConfirmation(
+                                      "Excluir Desconto?",
+                                      "Esta oferta será removida imediatamente da vitrine pública.",
+                                      async () => {
+                                        await supabase.from('partner_discounts' as any).delete().eq('id', discount.id);
+                                        loadPartnerDiscounts(selectedPartner.id);
+                                      }
+                                    );
+                                  }}
+                                >
+                                  <Trash size={14} />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-8 flex gap-4">
+                      <Button variant="outline" className="flex-1 h-14 rounded-2xl" onClick={() => setIsPartnerDialogOpen(false)}>Fechar</Button>
+                      <Button
+                        variant="hero"
+                        className="flex-1 h-14 rounded-2xl shadow-xl shadow-accent/20"
+                        onClick={() => {
+                          setEditData({ ...selectedPartner });
+                          setIsEditing(true);
+                        }}
+                      >
+                        Editar Parceiro
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Subscriber Details Dialog */}
+      <Dialog open={isSubscriberDialogOpen} onOpenChange={setIsSubscriberDialogOpen}>
+        <DialogContent className="max-w-2xl rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white text-primary">
+          {selectedSubscriber && (
+            <>
+              <div className="bg-primary p-12 text-white relative">
+                <div className="absolute top-0 right-0 p-12 opacity-10">
+                  <Users size={120} />
+                </div>
+                <div className="relative z-10 flex items-center gap-6">
+                  <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center border border-white/30 shadow-2xl">
+                    <UserPlus className="text-white w-10 h-10" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-3xl font-brand font-black">{selectedSubscriber.name}</DialogTitle>
+                    <DialogDescription className="text-white/70 text-lg">Perfil Completo do Associado</DialogDescription>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-12 space-y-8 bg-white">
+                {isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Nome Completo</Label>
+                        <Input value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Status da Assinatura</Label>
+                        <Select value={editData.status} onValueChange={v => setEditData({ ...editData, status: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="approved">Ativo</SelectItem>
+                            <SelectItem value="pending">Pendente</SelectItem>
+                            <SelectItem value="rejected">Rejeitado/Inadimplente</SelectItem>
+                            <SelectItem value="cancelled">Cancelado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>WhatsApp</Label>
+                        <Input value={editData.phone} onChange={e => setEditData({ ...editData, phone: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>CPF</Label>
+                        <Input value={editData.cpf} onChange={e => setEditData({ ...editData, cpf: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="md:col-span-2 pt-6 flex gap-4">
+                      <Button variant="outline" className="flex-1 h-14 rounded-2xl" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                      <Button variant="hero" className="flex-1 h-14 rounded-2xl shadow-xl shadow-accent/20" onClick={() => handleUpdateSubscriber(selectedSubscriber.id, editData)}>Salvar Associado</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-6">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Contatos</p>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-bold">{selectedSubscriber.email}</span>
+                            <button
+                              onClick={() => openWhatsApp(selectedSubscriber.phone)}
+                              className="text-sm text-left font-medium hover:text-green-600 transition-colors flex items-center gap-2"
+                            >
+                              <MessageSquare className="w-4 h-4 text-green-500" />
+                              {selectedSubscriber.phone}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Documento</p>
+                          <span className="font-mono text-xs">{formatCPF(selectedSubscriber.cpf)}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-6">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Status</p>
+                          {getStatusBadge(selectedSubscriber.status)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="md:col-span-2 pt-6 border-t flex gap-4">
+                      <Button variant="outline" className="flex-1 h-14 rounded-2xl" onClick={() => setIsSubscriberDialogOpen(false)}>Fechar</Button>
+                      <Button variant="hero" className="flex-1 h-14 rounded-2xl shadow-xl shadow-accent/20" onClick={() => {
+                        setEditData({ ...selectedSubscriber });
+                        setIsEditing(true);
+                      }}>Editar Perfil</Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Lead Details Dialog */}
+      <Dialog open={isLeadDialogOpen} onOpenChange={setIsLeadDialogOpen}>
+        <DialogContent className="max-w-xl rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white text-primary">
+          {selectedLead && (
+            <>
+              <div className="bg-orange-600 p-12 text-white relative">
+                <div className="absolute top-0 right-0 p-12 opacity-10">
+                  <Target size={120} />
+                </div>
+                <div className="relative z-10 flex items-center gap-6">
+                  <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center border border-white/30 shadow-2xl">
+                    <Zap className="text-white w-8 h-8" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-2xl font-brand font-black">{selectedLead.nome_completo}</DialogTitle>
+                    <DialogDescription className="text-white/70">Lead de Marketing Digital</DialogDescription>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-12 space-y-8 bg-white text-primary">
+                {isEditing ? (
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label>Nome do Lead</Label>
+                      <Input value={editData.nome_completo} onChange={e => setEditData({ ...editData, nome_completo: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Notas do Administrador</Label>
+                      <Textarea
+                        className="min-h-[150px] rounded-2xl"
+                        value={editData.notes || ""}
+                        onChange={e => setEditData({ ...editData, notes: e.target.value })}
+                        placeholder="Adicione observações sobre o atendimento deste lead..."
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 py-4">
+                      <input
+                        type="checkbox"
+                        id="converted"
+                        checked={editData.converted}
+                        onChange={e => setEditData({ ...editData, converted: e.target.checked })}
+                        className="w-5 h-5 accent-accent"
+                      />
+                      <Label htmlFor="converted" className="font-bold cursor-pointer">Marcar como Convertido</Label>
+                    </div>
+                    <div className="flex gap-4 pt-4">
+                      <Button variant="outline" className="flex-1 h-14 rounded-2xl" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                      <Button variant="hero" className="flex-1 h-14 rounded-2xl bg-orange-600 shadow-xl shadow-orange-600/20" onClick={() => handleUpdateLead(selectedLead.id, editData)}>Salvar Notas</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-8">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">E-mail</p>
+                        <p className="font-bold flex items-center gap-2"><Mail className="w-4 h-4 text-orange-600" /> {selectedLead.email}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">WhatsApp</p>
+                        <button
+                          onClick={() => openWhatsApp(selectedLead.telefone)}
+                          className="font-bold hover:text-green-600 transition-colors flex items-center gap-2"
+                        >
+                          <MessageSquare className="w-4 h-4 text-green-500" />
+                          {selectedLead.telefone}
+                        </button>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Status</p>
+                        <Badge className={`${selectedLead.converted ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"} border-none uppercase text-[10px] px-3`}>
+                          {selectedLead.converted ? "Convertido" : "Pendente"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="p-6 bg-muted/30 rounded-3xl border border-dashed border-muted-foreground/20 space-y-3">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4" />
+                        Notas Internas
+                      </h4>
+                      <p className="text-sm italic leading-relaxed text-muted-foreground">
+                        {selectedLead.notes || "Nenhuma observação adicionada."}
+                      </p>
+                    </div>
+                    <div className="pt-6 flex gap-4">
+                      <Button variant="outline" className="flex-1 h-14 rounded-2xl" onClick={() => setIsLeadDialogOpen(false)}>Fechar</Button>
+                      <Button
+                        variant="hero"
+                        className="flex-1 h-14 rounded-2xl bg-orange-600 shadow-xl shadow-orange-600/20 font-bold"
+                        onClick={() => {
+                          setEditData({ ...selectedLead });
+                          setIsEditing(true);
+                        }}
+                      >
+                        Editar Lead
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Criação Manual */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-2xl rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white text-primary">
+          <div className="bg-primary p-8 text-white relative">
+            <DialogTitle className="text-2xl font-brand font-black">
+              {createType === "subscriber" ? "Novo Associado" :
+                createType === "lead" ? "Novo Lead" :
+                  createType === "partner" ? "Novo Parceiro" : "Nova Oferta Global"}
+            </DialogTitle>
+            <DialogDescription className="text-white/70">Inclusão manual de registro no sistema</DialogDescription>
+          </div>
+
+          <div className="p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {createType === "subscriber" && (
+                <>
+                  <div className="space-y-2"><Label>Nome Completo</Label><Input value={formData.name || ""} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>E-mail</Label><Input value={formData.email || ""} onChange={e => setFormData({ ...formData, email: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>CPF</Label><Input value={formData.cpf || ""} onChange={e => setFormData({ ...formData, cpf: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>WhatsApp</Label><Input value={formData.phone || ""} onChange={e => setFormData({ ...formData, phone: e.target.value })} /></div>
+                  <div className="md:col-span-2 space-y-2"><Label>Endereço</Label><Input value={formData.address || ""} onChange={e => setFormData({ ...formData, address: e.target.value })} /></div>
+                </>
+              )}
+
+              {createType === "lead" && (
+                <>
+                  <div className="space-y-2"><Label>Nome Completo</Label><Input value={formData.nome_completo || ""} onChange={e => setFormData({ ...formData, nome_completo: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>E-mail</Label><Input value={formData.email || ""} onChange={e => setFormData({ ...formData, email: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Telefone</Label><Input value={formData.telefone || ""} onChange={e => setFormData({ ...formData, telefone: e.target.value })} /></div>
+                  <div className="space-y-2">
+                    <Label>Atribuir ao Vendedor (Opcional)</Label>
+                    <Select value={formData.seller_id} onValueChange={v => setFormData({ ...formData, seller_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione um vendedor" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Todos os status</SelectItem>
-                        <SelectItem value="approved">Aprovados</SelectItem>
-                        <SelectItem value="pending">Pendentes</SelectItem>
-                        <SelectItem value="rejected">Rejeitados</SelectItem>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {sellers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
+                  <div className="md:col-span-2 space-y-2"><Label>Notas</Label><Textarea value={formData.notes || ""} onChange={e => setFormData({ ...formData, notes: e.target.value })} /></div>
+                </>
+              )}
 
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>CPF</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Telefone</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Desconto</TableHead>
-                        <TableHead>Data Pagamento</TableHead>
-                        <TableHead>Cadastro</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredSubscribers.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center text-muted-foreground">
-                            {searchTerm || statusFilter !== "all" 
-                              ? "Nenhum associado encontrado com os filtros aplicados"
-                              : "Nenhum associado cadastrado ainda"}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredSubscribers.map((subscriber) => (
-                          <TableRow key={subscriber.id}>
-                            <TableCell className="font-medium">{subscriber.name}</TableCell>
-                            <TableCell>{formatCPF(subscriber.cpf)}</TableCell>
-                            <TableCell>{subscriber.email}</TableCell>
-                            <TableCell>{subscriber.phone}</TableCell>
-                            <TableCell>{getStatusBadge(subscriber.status)}</TableCell>
-                            <TableCell>
-                              {subscriber.discount_applied ? (
-                                <Badge variant="secondary" className="bg-accent/10 text-accent">
-                                  5% aplicado
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {subscriber.paid_at ? formatDate(subscriber.paid_at) : '-'}
-                            </TableCell>
-                            <TableCell>{formatDate(subscriber.created_at)}</TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              {createType === "seller" && (
+                <>
+                  <div className="space-y-2"><Label>Nome do Vendedor</Label><Input placeholder="Ex: João Silva" value={formData.name || ""} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>E-mail Profissional</Label><Input placeholder="joao@clubeaquitem.com" value={formData.email || ""} onChange={e => setFormData({ ...formData, email: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>WhatsApp</Label><Input placeholder="21999999999" value={formData.phone || ""} onChange={e => setFormData({ ...formData, phone: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Senha de Acesso</Label><Input type="password" placeholder="Mínimo 6 caracteres" value={formData.password || ""} onChange={e => setFormData({ ...formData, password: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Slug do Link (Opcional)</Label><Input placeholder="joaosilva" value={formData.slug || ""} onChange={e => setFormData({ ...formData, slug: generateSlug(e.target.value) })} /></div>
+                  <div className="md:col-span-2 bg-purple-50 p-4 rounded-2xl border border-purple-100">
+                    <p className="text-xs text-purple-700 leading-relaxed font-medium">
+                      O sistema gerará automaticamente um link personalizado para este vendedor.
+                      Cada venda ou lead originado deste link será atribuído a ele para fins de comissionamento e relatórios.
+                    </p>
+                  </div>
+                </>
+              )}
 
-          <TabsContent value="leads" className="mt-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Leads do Meta Ads</CardTitle>
-                  <CardDescription>
-                    {filteredLeads.length} lead(s) capturados - <Button variant="link" className="p-0 h-auto" onClick={copyLandingPageUrl}><Copy className="w-3 h-3 mr-1" />Copiar link LP</Button>
-                  </CardDescription>
+              {createType === "partner" && (
+                <>
+                  <div className="space-y-2"><Label>Estabelecimento</Label><Input value={formData.nome_estabelecimento || ""} onChange={e => setFormData({ ...formData, nome_estabelecimento: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Responsável</Label><Input value={formData.responsavel || ""} onChange={e => setFormData({ ...formData, responsavel: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>E-mail</Label><Input value={formData.email || ""} onChange={e => setFormData({ ...formData, email: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Telefone</Label><Input value={formData.telefone || ""} onChange={e => setFormData({ ...formData, telefone: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Senha Inicial</Label><Input type="password" placeholder="Mínimo 6 caracteres" value={formData.password || ""} onChange={e => setFormData({ ...formData, password: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>CNPJ</Label><Input value={formData.cnpj || ""} onChange={e => setFormData({ ...formData, cnpj: e.target.value })} /></div>
+                  <div className="md:col-span-2 space-y-2"><Label>Endereço</Label><Input value={formData.endereco || ""} onChange={e => setFormData({ ...formData, endereco: e.target.value })} /></div>
+                </>
+              )}
+
+              {createType === "discount" && (
+                <>
+                  <div className="md:col-span-2 space-y-2">
+                    <Label>Parceiro</Label>
+                    <Select value={formData.partner_id} onValueChange={v => setFormData({ ...formData, partner_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o parceiro" /></SelectTrigger>
+                      <SelectContent>
+                        {partners.map(p => (<SelectItem key={p.id} value={p.id}>{p.nome_estabelecimento || (p as any).estabelecimento}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2"><Label>Título</Label><Input value={formData.titulo || ""} onChange={e => setFormData({ ...formData, titulo: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Desconto (%)</Label><Input type="number" value={formData.percentual_desconto || ""} onChange={e => setFormData({ ...formData, percentual_desconto: e.target.value })} /></div>
+                  <div className="md:col-span-2 space-y-2"><Label>Descrição</Label><Textarea value={formData.descricao || ""} onChange={e => setFormData({ ...formData, descricao: e.target.value })} /></div>
+                </>
+              )}
+            </div>
+
+            <div className="flex gap-4 pt-6">
+              <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => setIsCreateDialogOpen(false)}>Cancelar</Button>
+              <Button variant="hero" className="flex-1 h-12 rounded-xl" onClick={() => {
+                if (createType === "subscriber") handleCreateSubscriber(formData);
+                else if (createType === "lead") handleCreateLead(formData);
+                else if (createType === "partner") handleCreatePartner(formData);
+                else if (createType === "discount") handleCreateGlobalDiscount(formData);
+                else if (createType === "seller") handleCreateSeller(formData);
+              }}>
+                Cadastrar {
+                  createType === "subscriber" ? "Associado" :
+                    createType === "lead" ? "Lead" :
+                      createType === "partner" ? "Parceiro" :
+                        createType === "seller" ? "Vendedor" : "Oferta"
+                }
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edição de Desconto Global */}
+      <Dialog open={isDiscountDialogOpen} onOpenChange={setIsDiscountDialogOpen}>
+        <DialogContent className="max-w-xl rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white text-primary">
+          {selectedDiscount && (
+            <>
+              <div className="bg-accent p-8 text-white relative">
+                <div className="absolute top-0 right-0 p-8 opacity-10">
+                  <Tag size={100} />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col md:flex-row gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <DialogTitle className="text-2xl font-brand font-black relative z-10">Editar Oferta do Parceiro</DialogTitle>
+                <DialogDescription className="text-white/70 relative z-10">Ajuste os detalhes da promoção globalmente</DialogDescription>
+              </div>
+              <div className="p-8 space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Título da Promoção</Label>
+                    <Input value={editData.titulo} onChange={e => setEditData({ ...editData, titulo: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Desconto (%)</Label>
+                      <Input type="number" value={editData.percentual_desconto} onChange={e => setEditData({ ...editData, percentual_desconto: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status de Exibição</Label>
+                      <Select value={editData.ativo ? "true" : "false"} onValueChange={v => setEditData({ ...editData, ativo: v === "true" })}>
+                        <SelectTrigger className="h-12 rounded-xl"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Ativo na Vitrine</SelectItem>
+                          <SelectItem value="false">Pausado / Oculto</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Código Exclusivo (Opcional)</Label>
                     <Input
-                      placeholder="Buscar por nome, email ou telefone..."
-                      value={leadSearchTerm}
-                      onChange={(e) => setLeadSearchTerm(e.target.value)}
-                      className="pl-10"
+                      placeholder="EX: CLUBE10OFF"
+                      value={editData.codigo_cupom || ""}
+                      onChange={e => setEditData({ ...editData, codigo_cupom: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Validade da Promoção</Label>
+                    <Input
+                      type="date"
+                      value={editData.validade_fim ? editData.validade_fim.split('T')[0] : ""}
+                      onChange={e => setEditData({ ...editData, validade_fim: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Regras / Descrição</Label>
+                    <Textarea
+                      className="min-h-[120px] rounded-2xl"
+                      value={editData.descricao}
+                      onChange={e => setEditData({ ...editData, descricao: e.target.value })}
                     />
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Telefone</TableHead>
-                        <TableHead>Fonte</TableHead>
-                        <TableHead>Data Cadastro</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredLeads.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground">
-                            Nenhum lead capturado ainda
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredLeads.map((lead) => (
-                          <TableRow key={lead.id}>
-                            <TableCell className="font-medium">{lead.nome_completo}</TableCell>
-                            <TableCell>{lead.email}</TableCell>
-                            <TableCell>{lead.telefone}</TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">{lead.source || "meta_ads"}</Badge>
-                            </TableCell>
-                            <TableCell>{formatDate(lead.created_at)}</TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                <div className="flex gap-4 pt-4">
+                  <Button variant="outline" className="flex-1 h-14 rounded-2xl" onClick={() => setIsDiscountDialogOpen(false)}>Cancelar</Button>
+                  <Button
+                    variant="hero"
+                    className="flex-1 h-14 rounded-2xl shadow-xl shadow-accent/20"
+                    onClick={async () => {
+                      await handleUpdateDiscount(selectedDiscount.id, editData);
+                      setIsDiscountDialogOpen(false);
+                      fetchData();
+                    }}
+                  >
+                    Salvar Oferta
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
-          <TabsContent value="partners" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Parceiros Cadastrados</CardTitle>
-                <CardDescription>
-                  Mostrando {filteredPartners.length} de {partners.length} parceiro(s)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* Busca de Parceiros */}
-                <div className="flex flex-col md:flex-row gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por estabelecimento, responsável, email ou telefone..."
-                      value={partnerSearchTerm}
-                      onChange={(e) => setPartnerSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
+      {/* Modal de Confirmação Master (Substitui confirm do navegador) */}
+      <Dialog open={confirmConfig.isOpen} onOpenChange={(open) => !open && setConfirmConfig(prev => ({ ...prev, isOpen: false }))}>
+        <DialogContent className="max-w-md rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white text-primary">
+          <div className="bg-red-500 p-8 text-white relative text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/30 backdrop-blur-sm">
+              <Trash className="w-8 h-8 text-white" />
+            </div>
+            <DialogTitle className="text-2xl font-brand font-black">
+              {confirmConfig.title}
+            </DialogTitle>
+            <DialogDescription className="text-white/80 mt-2">
+              {confirmConfig.description}
+            </DialogDescription>
+          </div>
 
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Estabelecimento</TableHead>
-                        <TableHead>Responsável</TableHead>
-                        <TableHead>Telefone</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Endereço</TableHead>
-                        <TableHead>Data de Cadastro</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredPartners.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground">
-                            {partnerSearchTerm 
-                              ? "Nenhum parceiro encontrado com a busca aplicada"
-                              : "Nenhum parceiro cadastrado ainda"}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredPartners.map((partner) => (
-                          <TableRow key={partner.id}>
-                            <TableCell className="font-medium">{partner.estabelecimento}</TableCell>
-                            <TableCell>{partner.responsavel}</TableCell>
-                            <TableCell>{partner.telefone}</TableCell>
-                            <TableCell>{partner.email}</TableCell>
-                            <TableCell>{partner.endereco}</TableCell>
-                            <TableCell>{formatDate(partner.created_at)}</TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+          <div className="p-8 flex gap-4">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 rounded-xl border-border hover:bg-muted font-bold"
+              onClick={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="flex-1 h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-lg shadow-red-600/20"
+              onClick={confirmConfig.onConfirm}
+            >
+              Sim, Excluir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Footer />
+    </div >
   );
 };
 

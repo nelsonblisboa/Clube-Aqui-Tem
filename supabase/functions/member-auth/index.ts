@@ -30,8 +30,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseUrl = Deno.env.get("APP_SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("APP_SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Missing Supabase configuration");
@@ -61,9 +61,9 @@ const handler = async (req: Request): Promise<Response> => {
       if (error || !subscriber) {
         console.log('Subscriber not found or not approved:', error);
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: 'CPF não encontrado ou pagamento não confirmado. Verifique seus dados.' 
+          JSON.stringify({
+            success: false,
+            message: 'CPF não encontrado ou pagamento não confirmado. Verifique seus dados.'
           }),
           { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
@@ -74,8 +74,8 @@ const handler = async (req: Request): Promise<Response> => {
         // First access - allow login without password to create one
         if (!password || password === '') {
           return new Response(
-            JSON.stringify({ 
-              success: true, 
+            JSON.stringify({
+              success: true,
               firstAccess: true,
               subscriber: {
                 id: subscriber.id,
@@ -99,7 +99,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const hashedPassword = await hashPassword(password);
-      
+
       if (hashedPassword !== subscriber.password_hash) {
         return new Response(
           JSON.stringify({ success: false, message: 'Senha incorreta' }),
@@ -108,7 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           success: true,
           subscriber: {
             id: subscriber.id,
@@ -142,8 +142,8 @@ const handler = async (req: Request): Promise<Response> => {
 
       const { error } = await supabase
         .from('subscribers')
-        .update({ 
-          password_hash: hashedPassword, 
+        .update({
+          password_hash: hashedPassword,
           first_access: false,
           updated_at: new Date().toISOString()
         })

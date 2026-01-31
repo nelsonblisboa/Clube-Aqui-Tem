@@ -6,15 +6,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Gift, 
-  X, 
-  CheckCircle, 
-  Loader2, 
-  Percent, 
-  Timer, 
-  Star, 
-  Users, 
+import {
+  Gift,
+  X,
+  CheckCircle,
+  Loader2,
+  Percent,
+  Timer,
+  Star,
+  Users,
   TrendingUp,
   ShoppingBag,
   Heart,
@@ -154,6 +154,8 @@ const LeadCapture = () => {
     try {
       const validatedData = leadSchema.parse(formData);
 
+      const sellerId = localStorage.getItem("clube_ref_seller_id");
+
       const { error: dbError } = await supabase
         .from("leads")
         .insert({
@@ -161,6 +163,7 @@ const LeadCapture = () => {
           email: validatedData.email,
           telefone: validatedData.telefone,
           source: "meta_ads",
+          seller_id: sellerId,
         });
 
       if (dbError) {
@@ -256,15 +259,15 @@ const LeadCapture = () => {
                 <Star className="w-4 h-4 fill-current" />
                 <span className="text-sm font-semibold">+10.000 famílias economizando</span>
               </div>
-              
+
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-brand font-bold leading-tight">
                 <span className="text-foreground">Economize até</span>{" "}
                 <span className="text-accent">50%</span>{" "}
                 <span className="text-foreground">em compras do dia a dia</span>
               </h1>
-              
+
               <p className="text-lg text-muted-foreground">
-                Acesso a <strong>centenas de cupons de desconto</strong> em estabelecimentos 
+                Acesso a <strong>centenas de cupons de desconto</strong> em estabelecimentos
                 da sua cidade. Farmácias, restaurantes, postos, lojas e muito mais!
               </p>
             </motion.div>
@@ -376,7 +379,7 @@ const LeadCapture = () => {
                 <BadgeCheck className="w-5 h-5 text-primary" />
                 Pessoas reais, economia real
               </h3>
-              
+
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentTestimonial}
@@ -410,9 +413,8 @@ const LeadCapture = () => {
                   <button
                     key={i}
                     onClick={() => setCurrentTestimonial(i)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      i === currentTestimonial ? "w-6 bg-primary" : "bg-muted-foreground/30"
-                    }`}
+                    className={`w-2 h-2 rounded-full transition-all ${i === currentTestimonial ? "w-6 bg-primary" : "bg-muted-foreground/30"
+                      }`}
                   />
                 ))}
               </div>
@@ -433,7 +435,7 @@ const LeadCapture = () => {
                   RECEBA SUA PROPOSTA EXCLUSIVA
                 </p>
               </div>
-              
+
               <CardHeader className="text-center pb-4">
                 <CardTitle className="text-2xl font-brand text-primary">
                   Quero Economizar Agora!
@@ -562,7 +564,7 @@ const LeadCapture = () => {
           >
             <X className="h-4 w-4" />
           </button>
-          
+
           <DialogHeader className="text-center">
             <div className="w-20 h-20 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
               <AlertTriangle className="w-10 h-10 text-accent" />
@@ -571,11 +573,11 @@ const LeadCapture = () => {
               Espere! Você está perdendo dinheiro! 💸
             </DialogTitle>
             <DialogDescription className="text-center text-base pt-2">
-              <strong className="text-accent">Enquanto você pensa,</strong> outras famílias já estão 
+              <strong className="text-accent">Enquanto você pensa,</strong> outras famílias já estão
               economizando até <strong>R$847 por mês</strong> com nossos cupons!
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="bg-gradient-to-br from-accent/10 to-primary/10 rounded-xl p-6 text-center my-4">
             <p className="text-muted-foreground mb-2">Economia média mensal</p>
             <p className="text-4xl font-brand font-bold text-accent">R$847</p>
@@ -585,9 +587,9 @@ const LeadCapture = () => {
           </div>
 
           <div className="flex flex-col gap-3">
-            <Button 
-              variant="hero" 
-              size="lg" 
+            <Button
+              variant="hero"
+              size="lg"
               className="w-full animate-pulse"
               onClick={() => {
                 setShowExitPopup(false);
@@ -597,8 +599,8 @@ const LeadCapture = () => {
               <Gift className="w-5 h-5 mr-2" />
               QUERO ECONOMIZAR AGORA!
             </Button>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className="text-muted-foreground"
               onClick={() => setShowExitPopup(false)}
             >
@@ -625,11 +627,11 @@ const LeadCapture = () => {
             <DialogDescription className="text-center text-base pt-2">
               Você está a um passo de economizar até <strong className="text-accent">50%</strong> nas suas compras!
               <br /><br />
-              <strong>Nossa equipe entrará em contato em breve</strong> pelo WhatsApp para 
+              <strong>Nossa equipe entrará em contato em breve</strong> pelo WhatsApp para
               ativar sua conta e liberar seus cupons exclusivos.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl p-6 text-center my-4">
             <p className="font-semibold text-foreground mb-2">📱 Fique atento ao WhatsApp!</p>
             <p className="text-sm text-muted-foreground">
@@ -637,9 +639,9 @@ const LeadCapture = () => {
             </p>
           </div>
 
-          <Button 
-            variant="hero" 
-            size="lg" 
+          <Button
+            variant="hero"
+            size="lg"
             className="w-full"
             onClick={() => setShowSuccessPopup(false)}
           >
