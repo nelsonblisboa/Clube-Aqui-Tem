@@ -32,9 +32,9 @@ app.post('/api/scrape-coupons', async (req, res) => {
 });
 
 // Qualquer outra rota devolve o index.html (SPA)
-// app.get('*', (req, res) => {
-//     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-// });
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
 app.listen(PORT, () => {
     console.log(`

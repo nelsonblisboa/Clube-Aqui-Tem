@@ -72,10 +72,19 @@ async function deploy() {
             await client.uploadFrom(path.join(__dirname, file.local), file.remote);
         }
 
-        // 2. Upload directories
-        console.log("⬆️ Enviando pasta 'scripts'...");
+        // 2. Limpar e enviar pasta scripts
+        console.log("🗑️ Limpando pasta 'scripts' antiga no servidor...");
+        try {
+            await client.removeDir("scripts");
+            console.log("✅ Pasta scripts antiga removida!");
+        } catch (err) {
+            console.log("⚠️ Pasta scripts não existia (isso é normal na primeira vez)");
+        }
+
+        console.log("⬆️ Enviando pasta 'scripts' (Backend Scraper)...");
         await client.ensureDir("scripts");
         await client.uploadFromDir(path.join(__dirname, "scripts"), "scripts");
+        console.log("✅ Scripts enviados com sucesso!");
 
         console.log("🗑️ Limpando pasta 'dist' antiga no servidor...");
         try {
@@ -88,6 +97,7 @@ async function deploy() {
         console.log("⬆️ Enviando pasta 'dist' (Frontend Build)...");
         await client.ensureDir("dist");
         await client.uploadFromDir(path.join(__dirname, "dist"), "dist");
+        console.log("✅ Frontend enviado com sucesso!");
 
         console.log("\n✨ Deploy de arquivos concluído com sucesso!");
         console.log("👉 Agora acesse o painel da Umbler e reinicie a aplicação Node.js.");
