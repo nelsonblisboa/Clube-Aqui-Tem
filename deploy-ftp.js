@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config();
 
 const FTP_CONFIG = {
-    host: "geonosis01.umbler.host",
+    host: "alderaan07.umbler.host",
     user: "clubeaquitem-com-br",
     port: 21,
     password: process.env.FTP_PASSWORD // Tenta ler do .env
