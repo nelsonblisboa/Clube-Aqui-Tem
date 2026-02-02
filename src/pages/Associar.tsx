@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
-import { ArrowLeft, Shield, CreditCard, CheckCircle, Loader2, Gift, X, Star } from "lucide-react";
+import { ArrowLeft, Shield, CreditCard, CheckCircle, Loader2, Gift, X, Star, Handshake } from "lucide-react";
 import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import { z } from "zod";
@@ -26,7 +26,13 @@ const associadoSchema = z.object({
   nome_completo: z.string().trim().min(3, "Nome deve ter pelo menos 3 caracteres").max(100, "Nome muito longo"),
   telefone: z.string().trim().min(10, "Telefone inválido").max(15, "Telefone inválido"),
   email: z.string().trim().email("Email inválido").max(255, "Email muito longo"),
-  endereco: z.string().trim().min(10, "Endereço deve ser mais detalhado").max(200, "Endereço muito longo"),
+  cep: z.string().trim().min(8, "CEP inválido").max(9, "CEP inválido"),
+  rua: z.string().trim().min(3, "Rua é obrigatória").max(150, "Rua muito longa"),
+  numero: z.string().trim().min(1, "Número é obrigatório").max(10, "Número muito longo"),
+  complemento: z.string().trim().max(50, "Complemento muito longo").optional(),
+  bairro: z.string().trim().min(2, "Bairro é obrigatório").max(100, "Bairro muito longo"),
+  cidade: z.string().trim().min(2, "Cidade é obrigatória").max(100, "Cidade muito longa"),
+  estado: z.string().trim().length(2, "Estado deve ter 2 letras"),
   cpf: z.string().trim().min(11, "CPF inválido").max(14, "CPF inválido"),
 });
 
@@ -43,9 +49,16 @@ const Associar = () => {
     nome_completo: "",
     telefone: "",
     email: "",
-    endereco: "",
+    cep: "",
+    rua: "",
+    numero: "",
+    complemento: "",
+    bairro: "",
+    cidade: "",
+    estado: "",
     cpf: "",
   });
+  const [loadingCep, setLoadingCep] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Pricing
@@ -54,7 +67,7 @@ const Associar = () => {
 
   // Check if form is empty
   const isFormEmpty = () => {
-    return !formData.nome_completo && !formData.telefone && !formData.email && !formData.endereco && !formData.cpf;
+    return !formData.nome_completo && !formData.telefone && !formData.email && !formData.cep && !formData.cpf;
   };
 
   // Exit intent detection
@@ -106,6 +119,53 @@ const Associar = () => {
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
 
+  const formatCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 5) return numbers;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
+  };
+
+  const searchCEP = async (cep: string) => {
+    const cleanCEP = cep.replace(/\D/g, "");
+    if (cleanCEP.length !== 8) return;
+
+    setLoadingCep(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
+      const data = await response.json();
+
+      if (data.erro) {
+        toast({
+          variant: "destructive",
+          title: "CEP não encontrado",
+          description: "Verifique o CEP digitado e tente novamente",
+        });
+        return;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        rua: data.logradouro || "",
+        bairro: data.bairro || "",
+        cidade: data.localidade || "",
+        estado: data.uf || "",
+      }));
+
+      toast({
+        title: "Endereço encontrado!",
+        description: "Preencha apenas o número e complemento",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao buscar CEP",
+        description: "Tente novamente em alguns instantes",
+      });
+    } finally {
+      setLoadingCep(false);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     let formattedValue = value;
@@ -114,6 +174,13 @@ const Associar = () => {
       formattedValue = formatCPF(value);
     } else if (name === "telefone") {
       formattedValue = formatPhone(value);
+    } else if (name === "cep") {
+      formattedValue = formatCEP(value);
+      if (formattedValue.replace(/\D/g, "").length === 8) {
+        searchCEP(formattedValue);
+      }
+    } else if (name === "estado") {
+      formattedValue = value.toUpperCase().slice(0, 2);
     }
 
     setFormData((prev) => ({ ...prev, [name]: formattedValue }));
@@ -142,6 +209,9 @@ const Associar = () => {
       console.log("Creating payment preference...");
 
       // Call simplified Edge Function
+      // Montar endereço completo
+      const enderecoCompleto = `${validatedData.rua}, ${validatedData.numero}${validatedData.complemento ? ', ' + validatedData.complemento : ''} - ${validatedData.bairro}, ${validatedData.cidade} - ${validatedData.estado}, CEP: ${validatedData.cep}`;
+
       const { data, error } = await supabase.functions.invoke("create-mercadopago-preference", {
         body: {
           amount: amount,
@@ -173,7 +243,7 @@ const Associar = () => {
           name: validatedData.nome_completo,
           email: validatedData.email,
           phone: validatedData.telefone,
-          address: validatedData.endereco,
+          address: enderecoCompleto,
           cpf: cpfClean,
           discount_applied: discountApplied,
           external_reference: externalReference,
@@ -456,20 +526,130 @@ const Associar = () => {
                     )}
                   </div>
 
+                  {/* CEP */}
                   <div className="space-y-2">
-                    <Label htmlFor="endereco" className="font-bold text-primary">Endereço Residencial *</Label>
-                    <Input
-                      id="endereco"
-                      name="endereco"
-                      placeholder="Rua, número, bairro, cidade - UF"
-                      value={formData.endereco}
-                      onChange={handleChange}
-                      className={`h-12 rounded-xl ${errors.endereco ? "border-destructive ring-1 ring-destructive" : ""}`}
-                      required
-                    />
-                    {errors.endereco && (
-                      <p className="text-xs text-destructive font-medium">{errors.endereco}</p>
+                    <Label htmlFor="cep" className="font-bold text-primary">CEP *</Label>
+                    <div className="relative">
+                      <Input
+                        id="cep"
+                        name="cep"
+                        placeholder="00000-000"
+                        value={formData.cep}
+                        onChange={handleChange}
+                        maxLength={9}
+                        className={`h-12 rounded-xl ${errors.cep ? "border-destructive ring-1 ring-destructive" : ""}`}
+                        required
+                      />
+                      {loadingCep && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                        </div>
+                      )}
+                    </div>
+                    {errors.cep && (
+                      <p className="text-xs text-destructive font-medium">{errors.cep}</p>
                     )}
+                    <p className="text-xs text-muted-foreground">Digite seu CEP para buscar o endereço automaticamente</p>
+                  </div>
+
+                  {/* Rua e Número */}
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="md:col-span-2 space-y-2">
+                      <Label htmlFor="rua" className="font-bold text-primary">Rua/Avenida *</Label>
+                      <Input
+                        id="rua"
+                        name="rua"
+                        placeholder="Nome da rua"
+                        value={formData.rua}
+                        onChange={handleChange}
+                        className={`h-12 rounded-xl ${errors.rua ? "border-destructive ring-1 ring-destructive" : ""}`}
+                        required
+                      />
+                      {errors.rua && (
+                        <p className="text-xs text-destructive font-medium">{errors.rua}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="numero" className="font-bold text-primary">Número *</Label>
+                      <Input
+                        id="numero"
+                        name="numero"
+                        placeholder="123"
+                        value={formData.numero}
+                        onChange={handleChange}
+                        className={`h-12 rounded-xl ${errors.numero ? "border-destructive ring-1 ring-destructive" : ""}`}
+                        required
+                      />
+                      {errors.numero && (
+                        <p className="text-xs text-destructive font-medium">{errors.numero}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Complemento */}
+                  <div className="space-y-2">
+                    <Label htmlFor="complemento" className="font-bold text-primary">Complemento</Label>
+                    <Input
+                      id="complemento"
+                      name="complemento"
+                      placeholder="Apto, Bloco, etc. (opcional)"
+                      value={formData.complemento}
+                      onChange={handleChange}
+                      className="h-12 rounded-xl"
+                    />
+                  </div>
+
+                  {/* Bairro, Cidade e Estado */}
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="bairro" className="font-bold text-primary">Bairro *</Label>
+                      <Input
+                        id="bairro"
+                        name="bairro"
+                        placeholder="Bairro"
+                        value={formData.bairro}
+                        onChange={handleChange}
+                        className={`h-12 rounded-xl ${errors.bairro ? "border-destructive ring-1 ring-destructive" : ""}`}
+                        required
+                      />
+                      {errors.bairro && (
+                        <p className="text-xs text-destructive font-medium">{errors.bairro}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="cidade" className="font-bold text-primary">Cidade *</Label>
+                      <Input
+                        id="cidade"
+                        name="cidade"
+                        placeholder="Cidade"
+                        value={formData.cidade}
+                        onChange={handleChange}
+                        className={`h-12 rounded-xl ${errors.cidade ? "border-destructive ring-1 ring-destructive" : ""}`}
+                        required
+                      />
+                      {errors.cidade && (
+                        <p className="text-xs text-destructive font-medium">{errors.cidade}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="estado" className="font-bold text-primary">UF *</Label>
+                      <Input
+                        id="estado"
+                        name="estado"
+                        placeholder="SP"
+                        value={formData.estado}
+                        onChange={handleChange}
+                        maxLength={2}
+                        className={`h-12 rounded-xl ${errors.estado ? "border-destructive ring-1 ring-destructive" : ""}`}
+                        required
+                      />
+                      {errors.estado && (
+                        <p className="text-xs text-destructive font-medium">{errors.estado}</p>
+                      )}
+                    </div>
                   </div>
 
                   <Button
@@ -491,13 +671,21 @@ const Associar = () => {
                     )}
                   </Button>
 
-                  <div className="flex flex-col items-center gap-4 mt-8 pt-8 border-t border-border">
-                    <div className="flex items-center gap-6 opacity-60">
-                      <img src="https://http2.mlstatic.com/static/org-img/embed/MP-pay-button-logos/600-mercadopago-logo.png" alt="Mercado Pago" className="h-6 w-auto" />
-                      <div className="h-6 w-px bg-border" />
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                        <Shield className="w-3 h-3" />
-                        Checkout Transparente
+                  <div className="flex flex-col items-center gap-6 mt-10 pt-8 border-t border-border">
+                    <div className="flex items-center gap-4 bg-white/50 backdrop-blur-sm px-5 py-2.5 rounded-2xl border border-border shadow-sm hover:shadow-md transition-all duration-300">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-[#009EE3] flex items-center justify-center shadow-sm">
+                          <Handshake className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex flex-col leading-none">
+                          <span className="text-[10px] font-black text-[#003569] uppercase tracking-tighter">mercado</span>
+                          <span className="text-[13px] font-black text-[#009EE3] -mt-0.5">pago</span>
+                        </div>
+                      </div>
+                      <div className="w-px h-6 bg-border/60" />
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        <Shield className="w-4 h-4 text-green-600" />
+                        Checkout 100% Seguro
                       </div>
                     </div>
                     <p className="text-[11px] text-center text-muted-foreground max-w-sm">

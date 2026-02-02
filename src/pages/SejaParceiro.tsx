@@ -150,6 +150,18 @@ const SejaParceiro = () => {
                 return;
             }
 
+            // Enviar solicitação de assinatura automaticamente
+            // Buscamos o ID do parceiro recém-criado (ou usamos o email se id não retornado)
+            const { data: newAccount } = await (supabase as any)
+                .from('partner_accounts')
+                .select('id')
+                .eq('email', formData.email.toLowerCase())
+                .single();
+
+            if (newAccount) {
+                supabase.functions.invoke('assinafy-signature', { body: { type: 'partner', id: newAccount.id } });
+            }
+
             setSuccess(true);
             toast.success('Cadastro realizado com sucesso!');
 

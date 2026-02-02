@@ -121,6 +121,31 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Subscriber updated successfully:", data);
 
+    // Trigger Assinafy signature request if approved
+    if (subscriptionStatus === "approved") {
+      try {
+        const { data: sub } = await supabase
+          .from("subscribers")
+          .select("id")
+          .eq("external_reference", externalReference)
+          .single();
+
+        if (sub) {
+          console.log(`Triggering Assinafy signature for subscriber ${sub.id}`);
+          await fetch(`${supabaseUrl}/functions/v1/assinafy-signature`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`
+            },
+            body: JSON.stringify({ type: 'subscriber', id: sub.id })
+          });
+        }
+      } catch (triggerError) {
+        console.error("Error triggering Assinafy signature:", triggerError);
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, status: subscriptionStatus }),
       {

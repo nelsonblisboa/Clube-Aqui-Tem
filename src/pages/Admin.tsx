@@ -23,7 +23,7 @@ import {
   Search, Download, MessageCircle, Smartphone, ShoppingBag, ExternalLink,
   Filter, Target, Copy, FileSpreadsheet, Image as ImageIcon, LayoutDashboard,
   Zap, ArrowRight, UserPlus, TrendingUp, Phone, MapPin, Mail, Building2, ShieldCheck, Calendar,
-  Eye, FileText, CreditCard as BillingIcon, MessageSquare, Edit, Trash, Loader2, Tag, Plus, UserCog, RefreshCw
+  Eye, FileText, CreditCard as BillingIcon, MessageSquare, Edit, Trash, Loader2, Tag, Plus, UserCog, RefreshCw, FileSignature, Send
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
@@ -32,6 +32,7 @@ import CompaniesManager from "@/components/admin/CompaniesManager";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
+import AssinafyManager from "@/components/admin/AssinafyManager";
 
 interface Partner {
   id: string;
@@ -44,6 +45,10 @@ interface Partner {
   status: string;
   logo_url: string | null;
   created_at: string;
+  signature_status?: string;
+  signature_url?: string;
+  assinafy_document_id?: string;
+  assinafy_assignment_id?: string;
 }
 
 interface Subscriber {
@@ -60,6 +65,10 @@ interface Subscriber {
   company_id?: string;
   source?: string;
   seller_id?: string;
+  signature_status?: string;
+  signature_url?: string;
+  assinafy_document_id?: string;
+  assinafy_assignment_id?: string;
 }
 
 interface Lead {
@@ -82,6 +91,20 @@ interface Seller {
   slug: string;
   status: string;
   created_at: string;
+  signature_status?: string;
+  signature_url?: string;
+  assinafy_document_id?: string;
+  assinafy_assignment_id?: string;
+}
+
+interface AssinafySettings {
+  id: string;
+  account_id: string;
+  api_key: string;
+  template_id_subscriber: string;
+  template_id_partner: string;
+  template_id_seller: string;
+  webhook_secret: string;
 }
 
 // Links externos configuráveis
@@ -128,6 +151,8 @@ const Admin = () => {
   // Filtros e busca
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [assinafySettings, setAssinafySettings] = useState<AssinafySettings | null>(null);
+  const [isUpdatingAssinafy, setIsUpdatingAssinafy] = useState(false);
   const [activeTab, setActiveTab] = useState("subscribers");
   const [selectedPartner, setSelectedPartner] = useState<any>(null);
   const [isPartnerDialogOpen, setIsPartnerDialogOpen] = useState(false);
@@ -308,6 +333,10 @@ const Admin = () => {
       if (leadsResult.data) setLeads(leadsResult.data as any[]);
       if (discountsResult.data) setAllDiscounts(discountsResult.data as any[]);
 
+      // Fetch Assinafy Settings
+      const { data: assinafyData } = await supabase.from('assinafy_settings').select('*').maybeSingle();
+      if (assinafyData) setAssinafySettings(assinafyData);
+
     } catch (error) {
       console.error("Fetch Error:", error);
       toast({ title: "Erro ao carregar dados", variant: "destructive" });
@@ -468,13 +497,19 @@ const Admin = () => {
 
   const handleCreateSubscriber = async (data: any) => {
     try {
-      const { error } = await supabase.from('subscribers' as any).insert([{
+      const { data: newSub, error } = await supabase.from('subscribers' as any).insert([{
         ...data,
         status: data.status || 'approved',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      }]);
+      }]).select().single();
+
       if (error) throw error;
+
+      // Enviar solicitação de assinatura automaticamente
+      if (newSub) {
+        supabase.functions.invoke('assinafy-signature', { body: { type: 'subscriber', id: newSub.id } });
+      }
       toast({ title: "Sucesso", description: "Associado criado manualment." });
       fetchData();
       setIsCreateDialogOpen(false);
@@ -538,6 +573,11 @@ const Admin = () => {
       const { error: partError } = await supabase.from('partners' as any).insert([partnerData]);
       if (partError) {
         console.warn("Erro ao inserir na vitrine, mas conta foi criada:", partError);
+      }
+
+      // Enviar solicitação de assinatura automaticamente
+      if (account) {
+        supabase.functions.invoke('assinafy-signature', { body: { type: 'partner', id: account.id } });
       }
 
       toast({ title: "Sucesso", description: "Parceiro cadastrado e conta de acesso criada." });
@@ -607,9 +647,11 @@ const Admin = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
+      case 'active':
+      case 'signed':
         return (
           <Badge className="bg-green-100 text-green-700 border-none px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest">
-            Ativo
+            {status === 'signed' ? 'Assinado' : 'Ativo'}
           </Badge>
         );
       case 'pending':
@@ -619,13 +661,58 @@ const Admin = () => {
           </Badge>
         );
       case 'rejected':
+      case 'declined':
         return (
           <Badge className="bg-red-100 text-red-700 border-none px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest">
-            Cancelado
+            {status === 'declined' ? 'Recusado' : 'Cancelado'}
           </Badge>
         );
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary" className="px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest">{status}</Badge>;
+    }
+  };
+
+  const getSignatureBadge = (status: string | undefined) => {
+    if (!status) return <Badge variant="outline" className="opacity-30">N/A</Badge>;
+    switch (status) {
+      case 'signed':
+        return <Badge className="bg-green-500 text-white border-none text-[9px] font-black uppercase tracking-widest">Assinado</Badge>;
+      case 'pending':
+        return <Badge className="bg-amber-500 text-white border-none text-[9px] font-black uppercase tracking-widest">Pendente</Badge>;
+      case 'declined':
+        return <Badge className="bg-red-500 text-white border-none text-[9px] font-black uppercase tracking-widest">Recusado</Badge>;
+      default:
+        return <Badge variant="outline" className="text-[9px] uppercase">{status}</Badge>;
+    }
+  };
+
+  const handleResendSignature = async (type: string, item: any) => {
+    try {
+      if (!item.assinafy_document_id) {
+        // Se não tem ID, tenta criar a assinatura do zero
+        sonnerToast.loading("Gerando nova solicitação de assinatura...");
+        const { data, error } = await supabase.functions.invoke('assinafy-signature', {
+          body: { type, id: item.id }
+        });
+        if (error) throw error;
+        sonnerToast.success("Solicitação enviada com sucesso!");
+        fetchData();
+        return;
+      }
+
+      sonnerToast.loading("Reenviando notificação...");
+      // Obter settings para usar a API Key diretamente se necessário ou criar uma nova function
+      // Por enquanto vamos usar a mesma assinafy-signature que já lida com o registro
+      const { error } = await supabase.functions.invoke('assinafy-signature', {
+        body: { type, id: item.id }
+      });
+
+      if (error) throw error;
+      sonnerToast.success("E-mail de assinatura reenviado!");
+      fetchData();
+    } catch (error: any) {
+      console.error("Resend error:", error);
+      sonnerToast.error("Falha ao reenviar: " + error.message);
     }
   };
 
@@ -723,15 +810,21 @@ const Admin = () => {
 
       const hashedPassword = await hashPassword(data.password);
 
-      const { error } = await supabase.from('sellers').insert([{
+      const { data: newSeller, error } = await supabase.from('sellers' as any).insert([{
         name: data.name,
         email: data.email,
         phone: data.phone,
         slug: slug,
         status: 'active',
         password_hash: hashedPassword
-      }]);
+      }]).select().single();
+
       if (error) throw error;
+
+      // Enviar solicitação de assinatura automaticamente
+      if (newSeller) {
+        supabase.functions.invoke('assinafy-signature', { body: { type: 'seller', id: newSeller.id } });
+      }
       toast({ title: "Sucesso", description: "Vendedor cadastrado com sucesso." });
       fetchData();
       setIsCreateDialogOpen(false);
@@ -1115,6 +1208,10 @@ const Admin = () => {
                     <Building2 className="w-4 h-4" />
                     Empresas B2B
                   </TabsTrigger>
+                  <TabsTrigger value="assinafy" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                    <FileSignature className="w-4 h-4" />
+                    Assinafy
+                  </TabsTrigger>
                 </TabsList>
                 <div className="flex items-center gap-4">
                   <div className="relative group">
@@ -1177,9 +1274,9 @@ const Admin = () => {
                               <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">NOME COMPLETO</TableHead>
                                 <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">CPF</TableHead>
-                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">LOCALIZAÇÃO</TableHead>
                                 <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">ORIGEM</TableHead>
                                 <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">STATUS</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">ASSINATURA</TableHead>
                                 <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-right">AÇÕES</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -1211,6 +1308,7 @@ const Admin = () => {
                                     </span>
                                   </TableCell>
                                   <TableCell className="py-6 px-8">{getStatusBadge(item.status)}</TableCell>
+                                  <TableCell className="py-6 px-8">{getSignatureBadge(item.signature_status)}</TableCell>
                                   <TableCell className="py-6 px-8 text-right">
                                     <div className="flex items-center justify-end gap-2">
                                       <Button
@@ -1249,6 +1347,18 @@ const Admin = () => {
                                         }}
                                       >
                                         <Eye className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        title="Reenviar Assinatura"
+                                        className="text-primary hover:text-primary transition-colors"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleResendSignature("subscriber", item);
+                                        }}
+                                      >
+                                        <Send className="w-4 h-4" />
                                       </Button>
                                     </div>
                                   </TableCell>
@@ -1441,9 +1551,12 @@ const Admin = () => {
                                 <h4 className="text-lg font-brand font-black text-primary uppercase tracking-tight leading-tight">
                                   {partner.nome_estabelecimento || (partner as any).estabelecimento || "Sem Nome"}
                                 </h4>
-                                <Badge className={`${partner.status === 'active' || partner.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} border-none text-[8px] font-black uppercase px-2 py-0.5 mt-1`}>
-                                  {partner.status === 'active' || partner.status === 'approved' ? 'Ativo' : 'Pendente'}
-                                </Badge>
+                                <div className="flex flex-col items-end gap-2">
+                                  <Badge className={`${partner.status === 'active' || partner.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} border-none text-[8px] font-black uppercase px-2 py-0.5`}>
+                                    {partner.status === 'active' || partner.status === 'approved' ? 'Ativo' : 'Pendente'}
+                                  </Badge>
+                                  {getSignatureBadge(partner.signature_status)}
+                                </div>
                               </div>
                               <div className="space-y-2">
                                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1494,6 +1607,14 @@ const Admin = () => {
                                   onClick={() => handleDeletePartner(partner.id)}
                                 >
                                   <Trash size={14} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  className="px-3 h-9 text-primary hover:bg-primary/5"
+                                  title="Reenviar Assinatura"
+                                  onClick={() => handleResendSignature("partner", partner)}
+                                >
+                                  <Send size={14} />
                                 </Button>
                               </div>
                             </CardContent>
@@ -1553,7 +1674,7 @@ const Admin = () => {
                                 <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-primary">VENDEDOR</TableHead>
                                 <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-primary">LINK DE VENDA</TableHead>
                                 <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-center text-primary">PERFORMANCE</TableHead>
-                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-primary">COMISSÃO A PAGAR</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-primary">ASSINATURA</TableHead>
                                 <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-right text-primary">AÇÕES</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -1622,13 +1743,8 @@ const Admin = () => {
                                         </div>
                                       </div>
                                     </TableCell>
-                                    <TableCell className="py-6 px-8">
-                                      <div className="bg-green-50 border border-green-100 rounded-xl p-3 inline-flex flex-col min-w-[100px]">
-                                        <span className="text-[9px] font-bold text-green-600/70 uppercase tracking-wider">A Receber</span>
-                                        <span className="text-lg font-black text-green-700">
-                                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(commission)}
-                                        </span>
-                                      </div>
+                                    <TableCell className="py-6 px-8 whitespace-nowrap">
+                                      {getSignatureBadge(seller.signature_status)}
                                     </TableCell>
                                     <TableCell className="py-6 px-8 text-right">
                                       <div className="flex items-center justify-end gap-2">
@@ -1652,6 +1768,18 @@ const Admin = () => {
                                           onClick={() => handleDeleteSeller(seller.id)}
                                         >
                                           <Trash className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          title="Reenviar Assinatura"
+                                          className="text-primary hover:text-primary transition-colors"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleResendSignature("seller", seller);
+                                          }}
+                                        >
+                                          <Send className="w-4 h-4" />
                                         </Button>
                                       </div>
                                     </TableCell>
@@ -1832,6 +1960,9 @@ const Admin = () => {
                         </div>
                       </CardContent>
                     </Card>
+                  </TabsContent>
+                  <TabsContent value="assinafy" className="m-0 focus-visible:outline-none">
+                    <AssinafyManager settings={assinafySettings} onUpdate={fetchData} />
                   </TabsContent>
                 </motion.div>
               </AnimatePresence>
