@@ -77,6 +77,14 @@ async function deploy() {
         await client.ensureDir("scripts");
         await client.uploadFromDir(path.join(__dirname, "scripts"), "scripts");
 
+        console.log("🗑️ Limpando pasta 'dist' antiga no servidor...");
+        try {
+            await client.removeDir("dist");
+            console.log("✅ Pasta antiga removida!");
+        } catch (err) {
+            console.log("⚠️ Pasta dist não existia ou erro ao remover (isso é normal na primeira vez)");
+        }
+
         console.log("⬆️ Enviando pasta 'dist' (Frontend Build)...");
         await client.ensureDir("dist");
         await client.uploadFromDir(path.join(__dirname, "dist"), "dist");
