@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Store, ArrowLeft, CheckCircle, Upload, Image as ImageIcon, X, ShieldCheck, Mail, Phone, MapPin, Building2, User } from "lucide-react";
+import { Store, ArrowLeft, CheckCircle, Upload, Image as ImageIcon, X, ShieldCheck, Mail, Phone, MapPin, Building2, User, FileSignature } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -159,15 +159,28 @@ const SejaParceiro = () => {
                 .single();
 
             if (newAccount) {
-                supabase.functions.invoke('assinafy-signature', { body: { type: 'partner', id: newAccount.id } });
+                console.log('Invoking signature function for partner:', newAccount.id);
+                const { data: funcData, error: funcError } = await supabase.functions.invoke('assinafy-signature', {
+                    body: { type: 'partner', id: newAccount.id }
+                });
+
+                if (funcError) {
+                    console.error('Error invoking signature function:', funcError);
+                    toast.error('Erro de conexão ao processar contrato. Tente novamente.');
+                } else if (funcData?.success === false) {
+                    console.error('Signature function logic error:', funcData);
+                    toast.error(`Erro no Contrato: ${funcData.error} (v${funcData.version})`);
+                } else {
+                    console.log('Signature function success:', funcData);
+                }
             }
 
             setSuccess(true);
-            toast.success('Cadastro realizado com sucesso!');
+            toast.success('Cadastro realizado! Verifique seu e-mail para assinar o contrato.');
 
             setTimeout(() => {
                 navigate('/login-parceiro');
-            }, 3000);
+            }, 5000);
 
         } catch (error: any) {
             console.error('Signup error:', error);
@@ -194,25 +207,32 @@ const SejaParceiro = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         className="w-full max-w-md"
                     >
-                        <Card className="border-2 border-accent/20 shadow-xl text-center p-8 rounded-3xl">
-                            <div className="w-20 h-20 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                                <CheckCircle className="w-12 h-12 text-green-600" />
+                        <Card className="border-none shadow-2xl text-center p-10 rounded-[3rem] bg-white overflow-hidden relative">
+                            <div className="absolute top-0 left-0 w-full h-2 bg-accent"></div>
+                            <div className="w-24 h-24 bg-green-100 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner">
+                                <FileSignature className="w-12 h-12 text-green-600" />
                             </div>
-                            <CardTitle className="text-3xl font-brand text-primary mb-4">
-                                Proposta Enviada!
+                            <CardTitle className="text-3xl font-brand font-bold text-primary mb-4">
+                                Candidatura Enviada!
                             </CardTitle>
-                            <CardDescription className="text-base text-foreground/70 mb-8">
-                                Seu cadastro foi recebido com sucesso e entrou em nossa fila de análise prioritária.
+                            <CardDescription className="text-lg text-foreground/70 mb-8 leading-relaxed">
+                                Recebemos seus dados com sucesso.
                                 <br /><br />
-                                Fique atento ao seu email! Entraremos em contato em breve para ativar sua parceria.
+                                <strong>Importante:</strong> Enviamos agora mesmo um <strong>Contrato de Parceria Digital</strong> para o e-mail <strong>{formData.email}</strong> via Assinafy.
+                                <br /><br />
+                                Por favor, verifique sua caixa de entrada (e spam) para realizar a assinatura e ativar seu acesso.
                             </CardDescription>
-                            <Button
-                                onClick={() => navigate('/login-parceiro')}
-                                variant="hero"
-                                className="w-full h-12 text-lg shadow-lg"
-                            >
-                                Ir para Login
-                            </Button>
+                            <div className="space-y-4">
+                                <Button
+                                    onClick={() => navigate('/login-parceiro')}
+                                    className="w-full h-14 text-lg font-bold bg-primary text-white hover:bg-primary/90 rounded-2xl shadow-xl shadow-primary/20 transition-all"
+                                >
+                                    Ir para Área do Parceiro
+                                </Button>
+                                <p className="text-xs text-muted-foreground flex items-center justify-center gap-2">
+                                    <ShieldCheck className="w-4 h-4 text-accent" /> Assinatura Digital Segura via Assinafy
+                                </p>
+                            </div>
                         </Card>
                     </motion.div>
                 </main>
