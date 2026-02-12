@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../analise"
+		},
+		{
+			"path": "../Pesquisar CPF para Grupos"
 		}
 	],
 	"settings": {}

@@ -98,29 +98,37 @@ serve(async (req: Request): Promise<Response> => {
             throw new Error(`[Step 2] Configurações não encontradas: ${settingsError?.message || "Tabela vazia"}`);
         }
 
-        const account_id = settings.account_id?.trim();
         const api_key = settings.api_key?.trim();
+        let account_id = "";
         let template_id = "";
         let table = "";
         let nameField = "name";
 
         if (type === "subscriber") {
+            account_id = settings.account_id_subscriber?.trim() || settings.account_id?.trim();
             template_id = settings.template_id_subscriber?.trim();
             table = "subscribers";
         } else if (type === "partner") {
+            account_id = settings.account_id_partner?.trim() || settings.account_id?.trim();
             template_id = settings.template_id_partner?.trim();
             table = "partner_accounts";
             nameField = "nome_estabelecimento";
         } else if (type === "seller") {
+            account_id = settings.account_id_seller?.trim() || settings.account_id?.trim();
             template_id = settings.template_id_seller?.trim();
             table = "sellers";
         } else {
             throw new Error("[Step 2] Tipo inválido");
         }
 
+        if (!account_id) {
+            throw new Error(`[Step 2] Account ID para ${type} não configurado.`);
+        }
+
         if (!template_id) {
             throw new Error(`[Step 2] Template ID para ${type} não configurado.`);
         }
+
 
         // 2. Get target data
         console.log(`[Step 3] Fetching target ${id} from ${table}...`);

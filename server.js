@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import multer from 'multer';
+import { createSignatureRequest, sendOtp, validateOtp, handleWebhook } from './server/controllers/signatureController.js';
 import { runScraper } from './scripts/scraper.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -17,7 +19,17 @@ app.use(cors());
 app.use(express.json());
 
 // Servir arquivos estáticos do React (quando em produção)
-app.use(express.static(path.join(__dirname, 'dist')));
+// Servir arquivos estáticos do React (quando em produção)
+// app.use(express.static(path.join(__dirname, 'dist')));
+
+// Multer setup for file uploads
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Signature Routes
+app.post('/api/signatures/create', upload.single('file'), createSignatureRequest);
+app.post('/api/signatures/send-otp', sendOtp);
+app.post('/api/signatures/validate-otp', validateOtp);
+app.post('/api/signatures/webhook', handleWebhook);
 
 // Endpoint para acionar o scraper
 app.post('/api/scrape-coupons', async (req, res) => {
@@ -32,9 +44,9 @@ app.post('/api/scrape-coupons', async (req, res) => {
 });
 
 // Qualquer outra rota devolve o index.html (SPA)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+// app.get('*', (req, res) => {
+//     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+// });
 
 app.listen(PORT, () => {
     console.log(`

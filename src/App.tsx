@@ -27,6 +27,8 @@ import Termos from "./pages/Termos";
 import Privacidade from "./pages/Privacidade";
 import CuponsDesconto from "./pages/CuponsDesconto";
 import BackToTop from "./components/BackToTop";
+import ValidarAssinatura from "./pages/ValidarAssinatura";
+import TesteAssinatura from "./pages/TesteAssinatura";
 import ScrollToTop from "./components/ScrollToTop";
 import ReferralTracker from "./components/ReferralTracker";
 
@@ -67,6 +69,8 @@ const App = () => (
             <Route path="/termos-de-uso" element={<Termos />} />
             <Route path="/politica-de-privacidade" element={<Privacidade />} />
             <Route path="/cupons" element={<CuponsDesconto />} />
+            <Route path="/validar-assinatura" element={<ValidarAssinatura />} />
+            <Route path="/teste-assinatura" element={<TesteAssinatura />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS public.assinafy_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id TEXT NOT NULL,
     api_key TEXT NOT NULL,
+    account_id_subscriber TEXT,
+    account_id_partner TEXT,
+    account_id_seller TEXT,
     template_id_subscriber TEXT,
     template_id_partner TEXT,
     template_id_seller TEXT,
@@ -22,6 +25,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS single_settings_row ON public.assinafy_setting
 ALTER TABLE public.assinafy_settings ENABLE ROW LEVEL SECURITY;
 
 -- Only admins can see/edit settings
+DROP POLICY IF EXISTS admin_access_settings ON public.assinafy_settings;
+
 CREATE POLICY admin_access_settings ON public.assinafy_settings
     FOR ALL
     USING (EXISTS (
@@ -39,7 +44,9 @@ BEGIN
         ADD COLUMN assinafy_assignment_id TEXT,
         ADD COLUMN signature_status TEXT DEFAULT 'pending',
         ADD COLUMN signature_url TEXT,
-        ADD COLUMN signed_at TIMESTAMPTZ;
+        ADD COLUMN signed_at TIMESTAMPTZ,
+        ADD COLUMN otp_token TEXT,
+        ADD COLUMN otp_expires_at TIMESTAMPTZ;
     END IF;
 END $$;
 
@@ -52,7 +59,9 @@ BEGIN
         ADD COLUMN assinafy_assignment_id TEXT,
         ADD COLUMN signature_status TEXT DEFAULT 'pending',
         ADD COLUMN signature_url TEXT,
-        ADD COLUMN signed_at TIMESTAMPTZ;
+        ADD COLUMN signed_at TIMESTAMPTZ,
+        ADD COLUMN otp_token TEXT,
+        ADD COLUMN otp_expires_at TIMESTAMPTZ;
     END IF;
 END $$;
 
@@ -65,6 +74,8 @@ BEGIN
         ADD COLUMN assinafy_assignment_id TEXT,
         ADD COLUMN signature_status TEXT DEFAULT 'pending',
         ADD COLUMN signature_url TEXT,
-        ADD COLUMN signed_at TIMESTAMPTZ;
+        ADD COLUMN signed_at TIMESTAMPTZ,
+        ADD COLUMN otp_token TEXT,
+        ADD COLUMN otp_expires_at TIMESTAMPTZ;
     END IF;
 END $$;

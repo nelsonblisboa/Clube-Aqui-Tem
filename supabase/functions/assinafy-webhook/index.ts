@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-client@2.38.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 serve(async (req: Request): Promise<Response> => {
     try {
@@ -26,6 +26,7 @@ serve(async (req: Request): Promise<Response> => {
 
         // Update in all 3 tables just in case (or we could fetch where documentId matches)
         const tables = ["subscribers", "partner_accounts", "sellers"];
+        let updatedUser = null;
 
         for (const table of tables) {
             const { data, error } = await supabase
@@ -38,8 +39,47 @@ serve(async (req: Request): Promise<Response> => {
                 .select();
 
             if (data && data.length > 0) {
+                updatedUser = data[0];
                 console.log(`Updated status to ${localStatus} in table ${table} for document ${documentId}`);
                 break; // found and updated
+            }
+        }
+
+        // WhatsApp notification on signature success
+        if (localStatus === "signed" && updatedUser) {
+            const { data: settings } = await supabase.from("assinafy_settings").select("*").maybeSingle();
+
+            if (settings && settings.evolution_api_url && settings.evolution_api_key) {
+                try {
+                    const phone = updatedUser.phone || updatedUser.telefone;
+                    if (phone) {
+                        const cleanNumber = phone.replace(/\D/g, "");
+                        const formattedNumber = cleanNumber.startsWith("55") ? cleanNumber : `55${cleanNumber}`;
+
+                        const signerName = updatedUser.name || updatedUser.nome_estabelecimento || updatedUser.responsavel || "Associado";
+                        const message = `Parabéns ${signerName.split(' ')[0]}! 🎉 Seu contrato foi assinado com sucesso.
+
+Seu acesso ao Clube Aqui Tem já está ativo. Você pode acessar sua conta utilizando seu CPF e a senha cadastrada.
+
+Seja muito bem-vindo!`;
+
+                        const evolutionUrl = `${settings.evolution_api_url}/message/sendText/${settings.evolution_instance || 'default'}`;
+                        await fetch(evolutionUrl, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "apikey": settings.evolution_api_key
+                            },
+                            body: JSON.stringify({
+                                number: formattedNumber,
+                                options: { delay: 1000 },
+                                textMessage: { text: message }
+                            })
+                        });
+                    }
+                } catch (waError) {
+                    console.error("Error sending success WhatsApp:", waError);
+                }
             }
         }
 
