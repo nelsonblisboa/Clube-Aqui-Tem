@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Home, PartyPopper, ArrowRight, Zap, Download, Sparkles } from "lucide-react";
+import { CheckCircle, Home, PartyPopper, ArrowRight, Zap, Download, Sparkles, FileSignature } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -55,12 +55,21 @@ const PagamentoSucesso = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-4 group">
-                  <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-all duration-300 shadow-sm">
-                    <Zap className="w-6 h-6" />
+                  <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-all duration-300 shadow-sm border border-accent/20">
+                    <Zap className="w-6 h-6 text-accent group-hover:text-white" />
                   </div>
                   <div>
                     <h4 className="font-bold text-primary">Economia Imediata</h4>
                     <p className="text-sm text-muted-foreground">Apresente seu CPF nos parceiros e economize.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 group">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm border border-blue-200">
+                    <FileSignature className="w-6 h-6 text-blue-600 group-hover:text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-primary">Assinatura Digital</h4>
+                    <p className="text-sm text-muted-foreground">Enviamos o contrato para seu e-mail e WhatsApp.</p>
                   </div>
                 </div>
               </div>

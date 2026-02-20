@@ -52,6 +52,19 @@ const PORTALS = [
     { name: 'iFood', url: 'https://www.ifood.com.br/cupons', selectors: { card: '.coupon-card' } }
 ];
 
+// Estado global do scraper para progresso em tempo real
+let scraperStatus = {
+    is_running: false,
+    progress: 0,
+    current_portal: '',
+    total_portals: PORTALS.length,
+    found_count: 0,
+    last_update: null,
+    error: null
+};
+
+export const getScraperStatus = () => scraperStatus;
+
 // Lógica Híbrida: Seletores Específicos + Heurística
 async function extractCouponsFromPage(page, portal) {
     return await page.evaluate((portalData) => {
@@ -126,14 +139,26 @@ async function extractCouponsFromPage(page, portal) {
 
 async function scrapeAll() {
     console.log('🚀 Iniciando scraper multi-portal (Modo Stealth)...');
-    const browser = await puppeteer.launch({
-        headless: "new",
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled']
-    });
+    let browser;
+    try {
+        browser = await puppeteer.launch({
+            headless: "new",
+            executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled']
+        });
+    } catch (launchError) {
+        console.error('❌ Erro crítico ao iniciar navegador:', launchError.message);
+        throw new Error(`Falha ao iniciar Chrome: ${launchError.message}`);
+    }
 
     const allData = [];
+    let portalCount = 0;
 
     for (const portal of PORTALS) {
+        portalCount++;
+        scraperStatus.progress = Math.round((portalCount / PORTALS.length) * 100);
+        scraperStatus.current_portal = portal.name;
+
         try {
             console.log(`\n🔎 Acessando ${portal.name} (${portal.url})...`);
             const page = await browser.newPage();
@@ -166,6 +191,7 @@ async function scrapeAll() {
 
             console.log(`✅ ${coupons.length} ofertas encontradas em ${portal.name}`);
             allData.push(...coupons);
+            scraperStatus.found_count = allData.length;
 
             await page.close();
         } catch (e) {
@@ -236,19 +262,37 @@ async function saveToSupabase(coupons) {
 export async function runScraper() {
     console.log('🔄 Iniciando execução via API/Server...');
 
-    // 1. Coleta
-    let data = await scrapeAll();
+    scraperStatus.is_running = true;
+    scraperStatus.progress = 0;
+    scraperStatus.found_count = 0;
+    scraperStatus.error = null;
 
-    // 2. Fallback
-    if (data.length === 0) {
-        console.log('⚠️ Nenhum dado capturado. Usando Mocks.');
-        data = getMockCoupons();
+    try {
+        // 1. Coleta
+        let data = await scrapeAll();
+
+        // 2. Fallback
+        if (data.length === 0) {
+            console.log('⚠️ Nenhum dado capturado. Usando Mocks.');
+            data = getMockCoupons();
+        }
+
+        // 3. Salva
+        try {
+            await saveToSupabase(data);
+        } catch (saveError) {
+            console.error('❌ Erro ao salvar dados:', saveError.message);
+        }
+
+        scraperStatus.last_update = new Date().toISOString();
+        scraperStatus.progress = 100;
+        return { success: true, count: data.length };
+    } catch (err) {
+        scraperStatus.error = err.message;
+        throw err;
+    } finally {
+        scraperStatus.is_running = false;
     }
-
-    // 3. Salva
-    await saveToSupabase(data);
-
-    return { success: true, count: data.length };
 }
 
 // Se executado diretamente pelo Node (teste manual)

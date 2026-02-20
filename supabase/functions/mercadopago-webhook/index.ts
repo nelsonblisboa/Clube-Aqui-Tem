@@ -58,6 +58,15 @@ serve(async (req: Request): Promise<Response> => {
     const paymentId = notification.data.id;
     console.log("Processing payment:", paymentId);
 
+    // Handle dummy test notification from Mercado Pago
+    if (paymentId === "123456" || !paymentId) {
+      console.log("Detected test notification, returning 200");
+      return new Response(JSON.stringify({ received: true, test: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     // Fetch payment details from Mercado Pago
     const paymentResponse = await fetch(
       `https://api.mercadopago.com/v1/payments/${paymentId}`,
@@ -121,6 +130,20 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Subscriber updated successfully:", data);
 
+    // Create a log entry for admin visibility
+    try {
+      await supabase.from("mercadopago_logs").insert({
+        event_id: String(notification.id),
+        action: notification.action,
+        payment_id: String(paymentId),
+        external_reference: externalReference,
+        status: subscriptionStatus,
+        payload: paymentData
+      });
+    } catch (logError) {
+      console.error("Error creating log entry:", logError);
+    }
+
     // Trigger Assinafy signature request if approved
     if (subscriptionStatus === "approved") {
       try {
@@ -155,6 +178,24 @@ serve(async (req: Request): Promise<Response> => {
     );
   } catch (error) {
     console.error("Error in mercadopago-webhook:", error);
+
+    // Try to log the error if we have enough info
+    try {
+      // Create a dedicated client for error logging if needed, 
+      // but here we just reuse the existing one if available
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("APP_SUPABASE_URL");
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("APP_SUPABASE_SERVICE_ROLE_KEY");
+      if (supabaseUrl && supabaseServiceKey) {
+        const supabaseError = createClient(supabaseUrl, supabaseServiceKey);
+        await supabaseError.from("mercadopago_logs").insert({
+          action: 'error',
+          status: 'error',
+          payload: { error: error instanceof Error ? error.message : "Unknown error" }
+        });
+      }
+    } catch (e) {
+      console.error("Final fallback error logging failed:", e);
+    }
 
     return new Response(
       JSON.stringify({

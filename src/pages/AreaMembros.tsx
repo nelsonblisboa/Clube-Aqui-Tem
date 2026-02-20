@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -31,8 +31,11 @@ import {
   Camera,
   Upload,
   CreditCard,
-  QrCode
+  QrCode,
+  Download,
+  DownloadCloud
 } from "lucide-react";
+import html2canvas from 'html2canvas';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Header from "@/components/Header";
@@ -78,6 +81,8 @@ const AreaMembros = () => {
   const [subscriber, setSubscriber] = useState<Subscriber | null>(null);
   const [partnerDiscounts, setPartnerDiscounts] = useState<PartnerDiscount[]>([]);
   const [loadingDiscounts, setLoadingDiscounts] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -235,6 +240,59 @@ const AreaMembros = () => {
     }
   };
 
+  const handleDownloadCard = async () => {
+    if (!cardRef.current) return;
+
+    setIsDownloading(true);
+    const loadingToast = toast.loading('Gerando sua carteirinha...');
+
+    try {
+      // Pequeno delay para garantir que imagens foram renderizadas
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const element = cardRef.current;
+      const width = element.offsetWidth;
+      const height = element.offsetHeight;
+
+      const canvas = await html2canvas(element, {
+        scale: 4,
+        useCORS: true,
+        backgroundColor: null,
+        logging: false,
+        width: width,
+        height: height,
+        windowWidth: width,
+        windowHeight: height,
+        onclone: (clonedDoc) => {
+          clonedDoc.body.style.margin = '0';
+          clonedDoc.body.style.padding = '0';
+          const card = clonedDoc.querySelector('.w-\\[340px\\]') as HTMLElement;
+          if (card) {
+            card.style.transform = 'none';
+            card.style.transition = 'none';
+            card.style.margin = '0';
+            card.style.width = '340px';
+            card.style.height = '210px';
+            card.style.overflow = 'visible';
+          }
+        }
+      });
+
+      const image = canvas.toDataURL("image/png", 1.0);
+      const link = document.createElement('a');
+      link.download = `carteirinha-clube-${subscriber?.name?.split(' ')[0].toLowerCase() || 'membro'}.png`;
+      link.href = image;
+      link.click();
+
+      toast.success('Carteirinha baixada com sucesso!', { id: loadingToast });
+    } catch (error) {
+      console.error('Erro ao baixar carteirinha:', error);
+      toast.error('Erro ao gerar imagem da carteirinha.', { id: loadingToast });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('club_member');
     setSubscriber(null);
@@ -279,13 +337,6 @@ const AreaMembros = () => {
       description: "Consultas com especialistas a preços reduzidos em clínicas parceiras.",
       color: "text-cyan-600",
       bgColor: "bg-cyan-50"
-    },
-    {
-      icon: Tag,
-      title: "Cupons de Desconto Locais",
-      description: "Descontos de 5% a 50% em estabelecimentos comerciais locais parceiros.",
-      color: "text-accent",
-      bgColor: "bg-accent/10"
     },
     {
       icon: Smartphone,
@@ -525,9 +576,12 @@ const AreaMembros = () => {
               initial={{ opacity: 0, y: 30, rotateY: 90 }}
               animate={{ opacity: 1, y: 0, rotateY: 0 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 50 }}
-              className="relative group perspective-1000 mx-auto md:mx-0"
+              className="relative group perspective-1000 mx-auto md:mx-0 flex flex-col items-center gap-4"
             >
-              <div className="w-[340px] h-[210px] bg-gradient-to-br from-[#1a1a1a] to-[#2d2d2d] rounded-2xl shadow-2xl border border-white/10 relative overflow-hidden transform transition-transform duration-500 hover:scale-105 select-none">
+              <div
+                ref={cardRef}
+                className="w-[340px] h-[210px] bg-gradient-to-br from-[#1a1a1a] to-[#2d2d2d] rounded-2xl shadow-2xl border border-white/10 relative overflow-hidden transform transition-transform duration-500 hover:scale-105 select-none"
+              >
                 {/* Card Background Effects */}
                 <div className="absolute top-0 right-0 w-40 h-40 bg-accent/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
                 <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
@@ -637,6 +691,24 @@ const AreaMembros = () => {
                   Toque na foto para alterar
                 </p>
               </div>
+
+              <Button
+                onClick={handleDownloadCard}
+                disabled={isDownloading}
+                className="bg-accent hover:bg-accent/90 text-primary font-black rounded-xl shadow-lg shadow-accent/20 border-none px-6 h-12 gap-2 mt-2 w-full max-w-[340px]"
+              >
+                {isDownloading ? (
+                  <span className="flex items-center gap-2">
+                    <DownloadCloud className="w-5 h-5 animate-bounce" />
+                    Gerando Papel de Parede...
+                  </span>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5" />
+                    Baixar Carteirinha (Foto)
+                  </>
+                )}
+              </Button>
             </motion.div>
 
             <motion.div

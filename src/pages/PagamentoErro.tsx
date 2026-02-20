@@ -63,7 +63,7 @@ const PagamentoErro = () => {
                     <RefreshCw className="w-5 h-5 ml-2 group-hover:rotate-180 transition-transform duration-500" />
                   </Button>
                 </Link>
-                <a href="https://wa.me/55xxxxxxxxx" className="flex-1">
+                <a href="https://wa.me/5521964168479" className="flex-1">
                   <Button variant="outline" size="lg" className="w-full h-14 text-lg rounded-2xl border-2 border-primary text-primary hover:bg-primary/5 transition-all">
                     Falar no suporte
                     <MessageCircle className="w-5 h-5 ml-2" />

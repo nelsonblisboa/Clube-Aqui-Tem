@@ -8,7 +8,7 @@
     "build": "vite build",
     "start": "node server.js",
     "server": "node server.js",
-    "deploy": "npm run build && node deploy-ftp.js"
+    "deploy": "npm run build && git add . && git commit -m \"Atualização: Melhoria exibição status pagamento MP no Admin\" && git push origin main && node deploy-ftp.js"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -53,6 +53,7 @@
     "express": "^5.2.1",
     "form-data": "^4.0.5",
     "framer-motion": "^12.23.26",
+    "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
     "multer": "^2.0.2",

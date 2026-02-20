@@ -233,7 +233,7 @@ const LandingPage = () => {
                   Pare de Gastar <br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-white/50">Dinheiro à Toa</span> e <br />
                   <span className="text-accent relative">
-                    Economize 50%
+                    Economize ATÉ 50%
                     <svg className="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 100 8" preserveAspectRatio="none">
                       <path d="M0 7C30 7 70 7 100 2" stroke="#F59E0B" strokeWidth="4" fill="none" strokeLinecap="round" />
                     </svg>
@@ -544,13 +544,13 @@ const LandingPage = () => {
                     <Sparkles className="w-3.5 h-3.5" />
                     Melhor Custo-Benefício
                   </div>
-                  <h2 className="text-4xl md:text-6xl font-brand font-black mb-10 leading-tight tracking-tight">Plano Individual <br /><span className="text-accent underline decoration-accent/30 underline-offset-8">Sem Carência</span></h2>
+                  <h2 className="text-4xl md:text-6xl font-brand font-black mb-10 leading-tight tracking-tight">Plano Individual <br /><span className="text-accent underline decoration-accent/30 underline-offset-8">com Carência Reduzida</span></h2>
                   <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6 mb-12">
                     {[
                       "Cartão Virtual Imediato",
                       "Rede com +500 Lojas",
                       "Telemedicina 24h Ilimitada",
-                      "Assistência Auto e Casa",
+                      "Assistências pra você e sua Familia",
                       "Seguro de Vida Incluso",
                       "Descontos de até 50%"
                     ].map((feat, i) => (

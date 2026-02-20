@@ -206,18 +206,22 @@ const Associar = () => {
       // Generate external reference
       const externalReference = `associado_${Date.now()}_${cpfClean}`;
 
-      console.log("Creating payment preference...");
-
-      // Call simplified Edge Function
       // Montar endereço completo
       const enderecoCompleto = `${validatedData.rua}, ${validatedData.numero}${validatedData.complemento ? ', ' + validatedData.complemento : ''} - ${validatedData.bairro}, ${validatedData.cidade} - ${validatedData.estado}, CEP: ${validatedData.cep}`;
 
-      const { data, error } = await supabase.functions.invoke("create-mercadopago-preference", {
+      // 0. Choose Edge Function based on payment type
+      const functionName = paymentType === "monthly"
+        ? "create-mercadopago-subscription"
+        : "create-mercadopago-preference";
+
+      console.log(`Creating payment via ${functionName}...`);
+
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
           amount: amount,
           description: paymentType === "annual"
             ? `Clube Aqui Tem - Plano Anual (${discountApplied ? '5% OFF' : 'Valor integral'})`
-            : `Clube Aqui Tem - Plano Mensal (${discountApplied ? '5% OFF' : 'Valor integral'})`,
+            : `Clube Aqui Tem - Assinatura Mensal (${discountApplied ? '5% OFF' : 'Valor integral'})`,
           email: validatedData.email,
           external_reference: externalReference,
         },
@@ -232,7 +236,7 @@ const Associar = () => {
         throw new Error("URL de pagamento não recebida");
       }
 
-      console.log("Payment preference created successfully");
+      console.log("Payment preference/subscription created successfully");
 
       // Save to database
       const sellerId = localStorage.getItem("clube_ref_seller_id");

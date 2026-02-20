@@ -48,11 +48,18 @@ serve(async (req: Request): Promise<Response> => {
         email: email,
       },
       external_reference: external_reference,
-      back_urls: {
-        success: `${req.headers.get("origin") || "http://localhost:8080"}/pagamento-sucesso`,
-        failure: `${req.headers.get("origin") || "http://localhost:8080"}/pagamento-erro`,
-        pending: `${req.headers.get("origin") || "http://localhost:8080"}/pagamento-pendente`,
+      payment_methods: {
+        excluded_payment_types: [
+          { id: "ticket" } // Remove Boleto/Bancário
+        ],
+        installments: 12, // Permite parcelamento em até 12x
       },
+      back_urls: {
+        success: `${req.headers.get("origin") || "https://clubeaquitem.com.br"}/pagamento-sucesso`,
+        failure: `${req.headers.get("origin") || "https://clubeaquitem.com.br"}/pagamento-erro`,
+        pending: `${req.headers.get("origin") || "https://clubeaquitem.com.br"}/pagamento-pendente`,
+      },
+      auto_return: "approved",
       statement_descriptor: "CLUBE AQUI TEM",
     };
 

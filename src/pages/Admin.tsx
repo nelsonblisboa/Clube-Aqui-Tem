@@ -23,7 +23,7 @@ import {
   Search, Download, MessageCircle, Smartphone, ShoppingBag, ExternalLink,
   Filter, Target, Copy, FileSpreadsheet, Image as ImageIcon, LayoutDashboard,
   Zap, ArrowRight, UserPlus, TrendingUp, Phone, MapPin, Mail, Building2, ShieldCheck, Calendar,
-  Eye, FileText, CreditCard as BillingIcon, MessageSquare, Edit, Trash, Loader2, Tag, Plus, UserCog, RefreshCw, FileSignature, Send
+  Eye, FileText, CreditCard as BillingIcon, MessageSquare, Edit, Trash, Loader2, Tag, Plus, UserCog, RefreshCw, FileSignature, Send, Info, Check, Code
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
@@ -69,6 +69,17 @@ interface Subscriber {
   signature_url?: string;
   assinafy_document_id?: string;
   assinafy_assignment_id?: string;
+}
+
+interface PaymentLog {
+  id: string;
+  event_id: string;
+  action: string;
+  payment_id: string;
+  external_reference: string;
+  status: string;
+  payload: any;
+  created_at: string;
 }
 
 interface Lead {
@@ -146,6 +157,7 @@ const Admin = () => {
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [allDiscounts, setAllDiscounts] = useState<any[]>([]);
+  const [paymentLogs, setPaymentLogs] = useState<PaymentLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filtros e busca
@@ -171,6 +183,8 @@ const Admin = () => {
   // Edit states
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<any>(null);
+  const [isJSONDialogOpen, setIsJSONDialogOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<any>(null);
   const [partnerDiscounts, setPartnerDiscounts] = useState<any[]>([]);
   const [loadingDiscounts, setLoadingDiscounts] = useState(false);
   const [totals, setTotals] = useState({ subscribers: 0, partners: 0, leads: 0, sellers: 0 });
@@ -180,6 +194,8 @@ const Admin = () => {
   const [sellerMetrics, setSellerMetrics] = useState<Record<string, { whatsapp: number; checkout: number }>>({});
   const [couponStats, setCouponStats] = useState({ total: 0, lastUpdate: null as string | null });
   const [isUpdatingCoupons, setIsUpdatingCoupons] = useState(false);
+  const [scraperProgress, setScraperProgress] = useState(0);
+  const [currentPortal, setCurrentPortal] = useState("");
 
   const openWhatsApp = (phone: string) => {
     if (!phone) return;
@@ -285,6 +301,17 @@ const Admin = () => {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+
+      // Fetch payment logs separately to avoid issues with Promise.all matching
+      const { data: logsData } = await supabase
+        .from('mercadopago_logs' as any)
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (logsData) {
+        setPaymentLogs(logsData as any[]);
+      }
 
       setCouponStats({
         total: totalCoupons || 0,
@@ -1102,6 +1129,16 @@ const Admin = () => {
                       onClick={async () => {
                         if (isUpdatingCoupons) return;
                         setIsUpdatingCoupons(true);
+                        setScraperProgress(0);
+                        setCurrentPortal("Iniciando...");
+
+                        const apiUrl = window.location.hostname === 'localhost'
+                          ? 'http://localhost:3000/api/scrape-coupons'
+                          : '/api/scrape-coupons';
+
+                        const statusUrl = window.location.hostname === 'localhost'
+                          ? 'http://localhost:3000/api/scrape-status'
+                          : '/api/scrape-status';
 
                         toast({
                           title: "Atualização Iniciada",
@@ -1109,36 +1146,81 @@ const Admin = () => {
                           className: "bg-blue-600 text-white border-none"
                         });
 
-                        try {
-                          // Tenta chamar o servidor local Node.js (ou produção se estiver na mesma origem)
-                          const response = await fetch('http://localhost:3000/api/scrape-coupons', { method: 'POST' });
+                        // Dispara o scraper sem travar o botão aguardando o fetch longo
+                        fetch(apiUrl, { method: 'POST' }).catch(err => {
+                          console.error("Scraper fire error:", err);
+                        });
 
-                          if (!response.ok) {
-                            // Se falhar localhost, tenta via Supabase Edge Function (caso esteja em prod)
-                            const { error } = await supabase.functions.invoke('scrape-coupons');
-                            if (error) throw error;
+                        // Polling de progresso
+                        const interval = setInterval(async () => {
+                          try {
+                            const res = await fetch(statusUrl);
+                            if (!res.ok) return;
+                            const data = await res.json();
+
+                            setScraperProgress(data.progress || 0);
+                            setCurrentPortal(data.current_portal || "");
+
+                            if (data.is_running === false && data.progress >= 100) {
+                              clearInterval(interval);
+                              setIsUpdatingCoupons(false);
+                              fetchData();
+                              toast({
+                                title: "Sucesso",
+                                description: "Cupons atualizados!",
+                                className: "bg-green-600 text-white border-none"
+                              });
+                            }
+
+                            if (data.error) {
+                              clearInterval(interval);
+                              setIsUpdatingCoupons(false);
+                              toast({
+                                title: "Erro no Scraper",
+                                description: data.error,
+                                variant: "destructive"
+                              });
+                            }
+                          } catch (e) {
+                            console.error("Polling error:", e);
                           }
-
-                          toast({ title: "Sucesso", description: "Cupons atualizados!", className: "bg-green-600 text-white border-none" });
-                          fetchData();
-                        } catch (error) {
-                          console.error("Erro script:", error);
-                          toast({ title: "Info", description: "Comando enviado. Aguarde alguns instantes.", className: "bg-blue-600 text-white border-none" });
-                        } finally {
-                          // Delay pequeno para UX (não piscar muito rapido se for cacheado)
-                          setTimeout(() => setIsUpdatingCoupons(false), 2000);
-                        }
+                        }, 2000);
                       }}
                     >
-                      <div className="flex flex-col items-center">
+                      <div className="flex flex-col items-center px-4">
                         {isUpdatingCoupons ? (
-                          <div className="w-6 h-6 mb-2 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="relative w-10 h-10 mb-1">
+                              <svg className="w-full h-full" viewBox="0 0 36 36">
+                                <path
+                                  className="text-white/20"
+                                  strokeDasharray="100, 100"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  fill="none"
+                                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                />
+                                <path
+                                  className="text-white"
+                                  strokeDasharray={`${scraperProgress}, 100`}
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
+                                  fill="none"
+                                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black">
+                                {scraperProgress}%
+                              </div>
+                            </div>
+                          </div>
                         ) : (
                           <link.icon className="w-6 h-6 mb-2 animate-pulse" />
                         )}
 
-                        <span className="text-xs uppercase tracking-widest mb-1">
-                          {isUpdatingCoupons ? "Atualizando..." : link.name}
+                        <span className="text-[10px] uppercase tracking-tighter text-center leading-tight">
+                          {isUpdatingCoupons ? `Processando: ${currentPortal}` : link.name}
                         </span>
 
                         {couponStats.total > 0 && !isUpdatingCoupons && (
@@ -1177,52 +1259,55 @@ const Admin = () => {
           {/* Main Data Section */}
           <section>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-4 rounded-3xl shadow-xl border border-border">
-                <TabsList className="bg-muted/50 p-1 rounded-2xl">
-                  <TabsTrigger value="subscribers" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
-                    <CreditCard className="w-4 h-4" />
-                    Associados
-                    {searchTerm && <Badge variant="secondary" className="ml-1 px-1.5 h-5 min-w-[20px] text-[10px] bg-white/20 text-inherit border-none">{filteredSubscribers.length}</Badge>}
-                  </TabsTrigger>
-                  <TabsTrigger value="leads" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
-                    <Target className="w-4 h-4" />
-                    Leads
-                    {searchTerm && <Badge variant="secondary" className="ml-1 px-1.5 h-5 min-w-[20px] text-[10px] bg-white/20 text-inherit border-none">{filteredLeads.length}</Badge>}
-                  </TabsTrigger>
-                  <TabsTrigger value="partners" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
-                    <Store className="w-4 h-4" />
-                    Parceiros
-                    {searchTerm && <Badge variant="secondary" className="ml-1 px-1.5 h-5 min-w-[20px] text-[10px] bg-white/20 text-inherit border-none">{filteredPartners.length}</Badge>}
-                  </TabsTrigger>
-                  <TabsTrigger value="sellers" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Vendedores
-                    {searchTerm && <Badge variant="secondary" className="ml-1 px-1.5 h-5 min-w-[20px] text-[10px] bg-white/20 text-inherit border-none">{filteredSellers.length}</Badge>}
-                  </TabsTrigger>
-                  <TabsTrigger value="discounts" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
-                    <Tag className="w-4 h-4" />
-                    Descontos (Geral)
-                    {searchTerm && <Badge variant="secondary" className="ml-1 px-1.5 h-5 min-w-[20px] text-[10px] bg-white/20 text-inherit border-none">{filteredDiscounts.length}</Badge>}
-                  </TabsTrigger>
-                  <TabsTrigger value="companies" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
-                    <Building2 className="w-4 h-4" />
-                    Empresas B2B
-                  </TabsTrigger>
-                  <TabsTrigger value="assinafy" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
-                    <FileSignature className="w-4 h-4" />
-                    Assinafy
-                  </TabsTrigger>
-                </TabsList>
-                <div className="flex items-center gap-4">
-                  <div className="relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <Input
-                      placeholder="Busca global..."
-                      className="h-12 pl-12 w-[300px] rounded-2xl border-border bg-[#F9FAFB] focus:bg-white transition-all"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-white p-4 rounded-3xl shadow-xl border border-border">
+                <div className="flex-1 overflow-x-auto no-scrollbar">
+                  <TabsList className="bg-muted/50 p-1 rounded-2xl flex w-max min-w-full">
+                    <TabsTrigger value="subscribers" className="rounded-xl px-4 py-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      Associados
+                      {searchTerm && <Badge variant="secondary" className="ml-1 px-1 h-4 text-[9px] bg-white/20 text-inherit border-none">{filteredSubscribers.length}</Badge>}
+                    </TabsTrigger>
+                    <TabsTrigger value="leads" className="rounded-xl px-4 py-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                      <Target className="w-4 h-4" />
+                      Leads
+                      {searchTerm && <Badge variant="secondary" className="ml-1 px-1 h-4 text-[9px] bg-white/20 text-inherit border-none">{filteredLeads.length}</Badge>}
+                    </TabsTrigger>
+                    <TabsTrigger value="partners" className="rounded-xl px-4 py-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                      <Store className="w-4 h-4" />
+                      Parceiros
+                      {searchTerm && <Badge variant="secondary" className="ml-1 px-1 h-4 text-[9px] bg-white/20 text-inherit border-none">{filteredPartners.length}</Badge>}
+                    </TabsTrigger>
+                    <TabsTrigger value="sellers" className="rounded-xl px-4 py-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Vendedores
+                      {searchTerm && <Badge variant="secondary" className="ml-1 px-1 h-4 text-[9px] bg-white/20 text-inherit border-none">{filteredSellers.length}</Badge>}
+                    </TabsTrigger>
+                    <TabsTrigger value="payments" className="rounded-xl px-4 py-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-accent" />
+                      Pagamentos
+                    </TabsTrigger>
+                    <TabsTrigger value="discounts" className="rounded-xl px-4 py-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                      <Tag className="w-4 h-4" />
+                      Ofertas
+                    </TabsTrigger>
+                    <TabsTrigger value="companies" className="rounded-xl px-4 py-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      B2B
+                    </TabsTrigger>
+                    <TabsTrigger value="assinafy" className="rounded-xl px-4 py-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all flex items-center gap-2">
+                      <FileSignature className="w-4 h-4" />
+                      Assinafy
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+                <div className="relative group w-full xl:w-[280px]">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <Input
+                    placeholder="Busca global..."
+                    className="h-12 pl-12 w-full rounded-2xl border-border bg-[#F9FAFB] focus:bg-white transition-all shadow-inner"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
               </div>
 
@@ -1297,9 +1382,6 @@ const Admin = () => {
                                     </div>
                                   </TableCell>
                                   <TableCell className="py-6 px-8 font-medium text-xs font-mono">{formatCPF(item.cpf)}</TableCell>
-                                  <TableCell className="py-6 px-8">
-                                    <span className="text-xs text-muted-foreground block truncate max-w-[200px]">{item.address}</span>
-                                  </TableCell>
                                   <TableCell className="py-6 px-8">
                                     <span className="text-xs font-bold text-primary">
                                       {item.seller_id
@@ -1964,6 +2046,100 @@ const Admin = () => {
                   <TabsContent value="assinafy" className="m-0 focus-visible:outline-none">
                     <AssinafyManager settings={assinafySettings} onUpdate={fetchData} />
                   </TabsContent>
+
+                  <TabsContent value="payments" className="m-0 focus-visible:outline-none">
+                    <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white">
+                      <div className="bg-primary/5 p-8 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-2xl font-brand font-bold text-primary italic">Status Mercado Pago</h3>
+                          <p className="text-sm text-muted-foreground">Últimos 50 eventos processados pelo Webhook</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={fetchData}
+                          className="rounded-xl border-primary/20 hover:bg-primary/5 h-10 px-4"
+                        >
+                          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                          Atualizar Atividade
+                        </Button>
+                      </div>
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader className="bg-muted/30">
+                              <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">DATA/HORA</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">EVENTO ID</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">CLIENTE / REFERÊNCIA</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest">STATUS MP</TableHead>
+                                <TableHead className="py-6 px-8 font-black text-[10px] uppercase tracking-widest text-right">PAYLOAD</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {paymentLogs.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={5} className="py-20 text-center text-muted-foreground italic">
+                                    Nenhum log de pagamento encontrado ainda.
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                paymentLogs.map((log) => {
+                                  const parts = log.external_reference?.split('_') || [];
+                                  const possibleCpf = parts[parts.length - 1];
+                                  const subscriber = subscribers.find(s => s.cpf === possibleCpf || s.id === log.external_reference);
+
+                                  return (
+                                    <TableRow key={log.id} className="hover:bg-muted/10 border-border/50">
+                                      <TableCell className="py-6 px-8 text-xs font-mono">
+                                        {new Date(log.created_at).toLocaleString('pt-BR')}
+                                      </TableCell>
+                                      <TableCell className="py-6 px-8">
+                                        <div className="flex flex-col">
+                                          <span className="font-bold text-primary">{log.payment_id}</span>
+                                          <span className="text-[9px] text-muted-foreground uppercase">{log.action || 'payment.updated'}</span>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="py-6 px-8">
+                                        <div className="flex flex-col">
+                                          {subscriber ? (
+                                            <>
+                                              <span className="font-bold text-primary">{subscriber.name}</span>
+                                              <span className="text-xs text-muted-foreground">{formatCPF(subscriber.cpf)}</span>
+                                              <span className="text-[10px] text-muted-foreground/60 italic mt-1">Ref: {log.external_reference}</span>
+                                            </>
+                                          ) : (
+                                            <span className="font-medium italic text-xs text-primary/70">{log.external_reference || "N/A"}</span>
+                                          )}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="py-6 px-8">
+                                        {getStatusBadge(log.status)}
+                                      </TableCell>
+                                      <TableCell className="py-6 px-8 text-right">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-[10px] h-8 px-4 rounded-xl border border-primary/10 hover:bg-primary hover:text-white transition-all font-bold"
+                                          onClick={() => {
+                                            setSelectedLog(log);
+                                            setIsJSONDialogOpen(true);
+                                          }}
+                                        >
+                                          <Eye className="w-3.5 h-3.5 mr-2" />
+                                          Ver Detalhes
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
                 </motion.div>
               </AnimatePresence>
               <TabsContent value="companies">
@@ -2569,6 +2745,118 @@ const Admin = () => {
       </Dialog>
 
       <Footer />
+
+      {/* JSON Viewer Dialog */}
+      <Dialog open={isJSONDialogOpen} onOpenChange={setIsJSONDialogOpen}>
+        <DialogContent className="max-w-3xl rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white text-primary">
+          {selectedLog && (
+            <>
+              <div className="bg-[#009EE3] p-8 text-white relative">
+                <div className="absolute top-0 right-0 p-8 opacity-10">
+                  <Zap size={100} />
+                </div>
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30">
+                    <Zap className="text-white w-6 h-6" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-2xl font-brand font-black">Detalhes do Evento MP</DialogTitle>
+                    <DialogDescription className="text-white/70">ID Externo: {selectedLog.payment_id}</DialogDescription>
+                  </div>
+                </div>
+              </div>
+              <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-muted/30 p-4 rounded-2xl">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase mb-1">Status</p>
+                    {getStatusBadge(selectedLog.status)}
+                  </div>
+                  <div className="bg-muted/30 p-4 rounded-2xl">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase mb-1">Ação</p>
+                    <p className="text-xs font-bold truncate">{selectedLog.action || "payment.updated"}</p>
+                  </div>
+                  <div className="bg-muted/30 p-4 rounded-2xl lg:col-span-2">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase mb-1">Referência Externa</p>
+                    <p className="text-xs font-mono font-bold truncate">{selectedLog.external_reference || "N/A"}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <Code className="w-4 h-4" />
+                    Payload Original (JSON)
+                  </h4>
+                  <div className="bg-[#1e1e1e] p-6 rounded-2xl overflow-hidden relative group">
+                    <div className="max-h-[300px] overflow-y-auto no-scrollbar font-mono text-[11px] leading-relaxed text-[#9CDCF0]">
+                      <pre>{JSON.stringify(selectedLog.payload, null, 2)}</pre>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 text-white/50 hover:text-white"
+                      onClick={() => {
+                        navigator.clipboard.writeText(JSON.stringify(selectedLog.payload, null, 2));
+                        toast({ title: "Copiado!", description: "Dados JSON copiados para a área de transferência." });
+                      }}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    Análise do Processamento
+                  </h4>
+                  <div className="space-y-4 text-sm">
+                    <div className="p-4 bg-white rounded-xl border border-primary/10">
+                      <p className="font-bold text-primary mb-1">Resumo do Resultado:</p>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {selectedLog.status === 'approved' ? (
+                          "✅ Pagamento Aprovado: O acesso do associado foi liberado e o sistema de assinatura (Assinafy) foi acionado para envio dos documentos."
+                        ) : selectedLog.status === 'pending' || selectedLog.status === 'in_process' ? (
+                          "⏳ Pagamento Pendente: O associado iniciou o pagamento (PIX ou Boleto). O sistema aguarda a compensação do Mercado Pago para liberar o acesso."
+                        ) : selectedLog.status === 'rejected' ? (
+                          "❌ Pagamento Rejeitado: A transação foi negada pelo banco ou operadora de cartão. O associado precisará tentar novamente."
+                        ) : (
+                          "ℹ️ Evento Recebido: O sistema processou a atualização de status (" + selectedLog.status + ") com sucesso."
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-green-600 mt-0.5">
+                          <Check className="w-3 h-3" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-[12px]">Comunicação MP</p>
+                          <p className="text-[11px] text-muted-foreground">Notificação recebida e validada.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mt-0.5">
+                          <Check className="w-3 h-3" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-[12px]">Registro de Log</p>
+                          <p className="text-[11px] text-muted-foreground">Log gerado para auditoria em {new Date(selectedLog.created_at).toLocaleTimeString('pt-BR')}.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-8 bg-muted/20 border-t flex justify-end">
+                <Button variant="hero" onClick={() => setIsJSONDialogOpen(false)} className="rounded-xl h-11 px-8">
+                  Fechar Visualização
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div >
   );
 };

@@ -6,7 +6,7 @@ Siga estes passos sempre que fizer alterações no código e quiser enviar para 
 1. **Abra o terminal** no VS Code.
 
 2. **Execute o comando de deploy**:
-   Este comando vai reconstruir o site (build) e enviar os arquivos automaticamente via FTP.
+   Este comando vai reconstruir o site (build), sincronizar as alterações com o **GitHub** e enviar os arquivos automaticamente via **FTP** para a Umbler.
    ```bash
    npm run deploy
    ```

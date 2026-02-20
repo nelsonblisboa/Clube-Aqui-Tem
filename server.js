@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { createSignatureRequest, sendOtp, validateOtp, handleWebhook } from './server/controllers/signatureController.js';
-import { runScraper } from './scripts/scraper.js';
+import { runScraper, getScraperStatus } from './scripts/scraper.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -41,6 +41,11 @@ app.post('/api/scrape-coupons', async (req, res) => {
         console.error('❌ Erro no endpoint de scraper:', error);
         res.status(500).json({ error: 'Falha ao atualizar cupons', details: error.message });
     }
+});
+
+// Endpoint para consultar o progresso
+app.get('/api/scrape-status', (req, res) => {
+    res.json(getScraperStatus());
 });
 
 // Qualquer outra rota devolve o index.html (SPA)
