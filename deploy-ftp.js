@@ -66,6 +66,14 @@ async function deploy() {
             { local: ".env", remote: ".env" }
         ];
 
+        // Mudar o diretório local de base no servidor pra onde a hospedagem realmente lê (pasta public no node da Umbler)
+        try {
+            await client.cd("public");
+            console.log("📂 Acessado o diretório raiz web /public");
+        } catch {
+            console.log("⚠️ A pasta /public não existe, a Umbler pode ter regras diferentes de diretório raiz (ignorando mudança e operando na raiz do FTP).");
+        }
+
         // 1. Upload root files
         for (const file of filesToUpload) {
             console.log(`⬆️ Enviando ${file.local}...`);
@@ -84,6 +92,8 @@ async function deploy() {
         console.log("⬆️ Enviando pasta 'scripts' (Backend Scraper)...");
         await client.ensureDir("scripts");
         await client.uploadFromDir(path.join(__dirname, "scripts"), "scripts");
+        await client.cd(".."); // voltar se entrou pra não perder referencia pro dist se necessário
+        try { await client.cd("public") } catch { }
         console.log("✅ Scripts enviados com sucesso!");
 
         console.log("🗑️ Limpando pasta 'dist' antiga no servidor...");
