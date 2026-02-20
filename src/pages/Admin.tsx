@@ -177,7 +177,7 @@ const Admin = () => {
 
   // Creation states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [createType, setCreateType] = useState<"subscriber" | "lead" | "partner" | "discount" | null>(null);
+  const [createType, setCreateType] = useState<"subscriber" | "lead" | "partner" | "discount" | "seller" | null>(null);
   const [formData, setFormData] = useState<any>({});
 
   // Edit states
@@ -277,9 +277,9 @@ const Admin = () => {
         eventsResult
       ] = await Promise.all([
         supabase.from('subscribers').select('*', { count: 'exact', head: true }),
-        supabase.from('partner_accounts').select('*', { count: 'exact', head: true }),
+        supabase.from('partner_accounts' as any).select('*', { count: 'exact', head: true }),
         supabase.from('leads').select('*', { count: 'exact', head: true }),
-        supabase.from('sellers').select('*', { count: 'exact', head: true }),
+        supabase.from('sellers' as any).select('*', { count: 'exact', head: true }),
         supabase.from('partner_accounts' as any).select('*').order('created_at', { ascending: false }),
         supabase.from('subscribers' as any).select('*').order('created_at', { ascending: false }).limit(10000),
         supabase.from('leads' as any).select('*').order('created_at', { ascending: false }),
@@ -315,7 +315,7 @@ const Admin = () => {
 
       setCouponStats({
         total: totalCoupons || 0,
-        lastUpdate: latestCoupon?.created_at || null
+        lastUpdate: (latestCoupon as any)?.created_at || null
       });
 
       setTotals({
@@ -325,7 +325,7 @@ const Admin = () => {
         sellers: countSellers.count || 0
       });
 
-      if (sellersResult.data) setSellers(sellersResult.data);
+      if (sellersResult.data) setSellers(sellersResult.data as any[]);
 
       // Process seller metrics
       if (eventsResult.data) {
@@ -361,8 +361,8 @@ const Admin = () => {
       if (discountsResult.data) setAllDiscounts(discountsResult.data as any[]);
 
       // Fetch Assinafy Settings
-      const { data: assinafyData } = await supabase.from('assinafy_settings').select('*').maybeSingle();
-      if (assinafyData) setAssinafySettings(assinafyData);
+      const { data: assinafyData } = await supabase.from('assinafy_settings' as any).select('*').maybeSingle();
+      if (assinafyData) setAssinafySettings(assinafyData as any);
 
     } catch (error) {
       console.error("Fetch Error:", error);
@@ -535,7 +535,7 @@ const Admin = () => {
 
       // Enviar solicitação de assinatura automaticamente
       if (newSub) {
-        supabase.functions.invoke('assinafy-signature', { body: { type: 'subscriber', id: newSub.id } });
+        supabase.functions.invoke('assinafy-signature', { body: { type: 'subscriber', id: (newSub as any).id } });
       }
       toast({ title: "Sucesso", description: "Associado criado manualment." });
       fetchData();
@@ -588,7 +588,7 @@ const Admin = () => {
 
       // 2. Inserir na vitrine pública (usando o mesmo ID para manter vínculo)
       const partnerData = {
-        id: account.id,
+        id: (account as any).id,
         email: data.email.toLowerCase(),
         endereco: data.endereco,
         estabelecimento: data.nome_estabelecimento,
@@ -604,7 +604,7 @@ const Admin = () => {
 
       // Enviar solicitação de assinatura automaticamente
       if (account) {
-        supabase.functions.invoke('assinafy-signature', { body: { type: 'partner', id: account.id } });
+        supabase.functions.invoke('assinafy-signature', { body: { type: 'partner', id: (account as any).id } });
       }
 
       toast({ title: "Sucesso", description: "Parceiro cadastrado e conta de acesso criada." });
@@ -824,7 +824,7 @@ const Admin = () => {
       const slug = data.slug || generateSlug(data.name);
 
       // Verificar se slug já existe
-      const { data: existing } = await supabase.from('sellers').select('id').eq('slug', slug).maybeSingle();
+      const { data: existing } = await supabase.from('sellers' as any).select('id').eq('slug', slug).maybeSingle();
       if (existing) {
         toast({ title: "Slug em uso", description: "Este nome já está sendo usado para um link de vendedor. Tente outro.", variant: "destructive" });
         return;
@@ -850,7 +850,7 @@ const Admin = () => {
 
       // Enviar solicitação de assinatura automaticamente
       if (newSeller) {
-        supabase.functions.invoke('assinafy-signature', { body: { type: 'seller', id: newSeller.id } });
+        supabase.functions.invoke('assinafy-signature', { body: { type: 'seller', id: (newSeller as any).id } });
       }
       toast({ title: "Sucesso", description: "Vendedor cadastrado com sucesso." });
       fetchData();
@@ -874,7 +874,7 @@ const Admin = () => {
         sellerData.password_hash = await hashPassword(updates.password);
       }
 
-      const { error } = await supabase.from('sellers').update(sellerData).eq('id', id);
+      const { error } = await supabase.from('sellers' as any).update(sellerData).eq('id', id);
       if (error) throw error;
       toast({ title: "Sucesso", description: "Vendedor atualizado com sucesso." });
       fetchData();
@@ -890,7 +890,7 @@ const Admin = () => {
       "Remover Vendedor?",
       "Todos os vínculos com este vendedor serão perdidos.",
       async () => {
-        const { error } = await supabase.from('sellers').delete().eq('id', id);
+        const { error } = await supabase.from('sellers' as any).delete().eq('id', id);
         if (error) throw error;
         toast({ title: "Removido", description: "Vendedor excluído com sucesso." });
         fetchData();
