@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config();
 
 const FTP_CONFIG = {
-    host: "alderaan07.umbler.host",
+    host: "alderaan08.umbler.host",
     user: "clubeaquitem-com-br",
     port: 21,
     password: process.env.FTP_PASSWORD // Tenta ler do .env
@@ -66,13 +66,8 @@ async function deploy() {
             { local: ".env", remote: ".env" }
         ];
 
-        // Mudar o diretório local de base no servidor pra onde a hospedagem realmente lê (pasta public no node da Umbler)
-        try {
-            await client.cd("public");
-            console.log("📂 Acessado o diretório raiz web /public");
-        } catch {
-            console.log("⚠️ A pasta /public não existe, a Umbler pode ter regras diferentes de diretório raiz (ignorando mudança e operando na raiz do FTP).");
-        }
+        // Removido o login na pasta public (pois o Umbler deste cliente está com / como diretório de publicação)
+        console.log("📂 Operando no diretório raiz (/)");
 
         // 1. Upload root files
         for (const file of filesToUpload) {
@@ -92,8 +87,7 @@ async function deploy() {
         console.log("⬆️ Enviando pasta 'scripts' (Backend Scraper)...");
         await client.ensureDir("scripts");
         await client.uploadFromDir(path.join(__dirname, "scripts"), "scripts");
-        await client.cd(".."); // voltar se entrou pra não perder referencia pro dist se necessário
-        try { await client.cd("public") } catch { }
+        await client.cd("/"); // voltar sempre pra raiz caso ensureDir tenha entrado (ensureDir as vezes entra)
         console.log("✅ Scripts enviados com sucesso!");
 
         console.log("🗑️ Limpando pasta 'dist' antiga no servidor...");
