@@ -19,7 +19,7 @@ app.use(cors());
 app.use(express.json());
 
 // Servir arquivos estáticos do React (quando em produção)
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Multer setup for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -49,7 +49,7 @@ app.get('/api/scrape-status', (req, res) => {
 
 // Qualquer outra rota devolve o index.html (SPA)
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {

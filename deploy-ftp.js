@@ -85,22 +85,26 @@ async function deploy() {
         }
 
         console.log("⬆️ Enviando pasta 'scripts' (Backend Scraper)...");
-        await client.ensureDir("scripts");
+        // Não usar ensureDir antes do uploadFromDir para evitar diretório aninhado (ex: /scripts/scripts/)
         await client.uploadFromDir(path.join(__dirname, "scripts"), "scripts");
-        await client.cd("/"); // voltar sempre pra raiz caso ensureDir tenha entrado (ensureDir as vezes entra)
         console.log("✅ Scripts enviados com sucesso!");
 
-        console.log("🗑️ Limpando pasta 'dist' antiga no servidor...");
+        console.log("🗑️ Limpando pasta 'public' antiga no servidor (Frontend)...");
         try {
-            await client.removeDir("dist");
+            await client.removeDir("public");
             console.log("✅ Pasta antiga removida!");
         } catch (err) {
-            console.log("⚠️ Pasta dist não existia ou erro ao remover (isso é normal na primeira vez)");
+            console.log("⚠️ Pasta public não existia ou erro ao remover");
         }
 
-        console.log("⬆️ Enviando pasta 'dist' (Frontend Build)...");
-        await client.ensureDir("dist");
-        await client.uploadFromDir(path.join(__dirname, "dist"), "dist");
+        // Cleanup: remove old dist folder
+        try {
+            await client.removeDir("dist");
+        } catch (err) { }
+
+        console.log("⬆️ Enviando pasta 'dist' local para 'public' (Frontend Build)...");
+        // O cliente envia direto do local 'dist' para o remoto 'public' estando na raiz
+        await client.uploadFromDir(path.join(__dirname, "dist"), "public");
         console.log("✅ Frontend enviado com sucesso!");
 
         console.log("\n✨ Deploy de arquivos concluído com sucesso!");
