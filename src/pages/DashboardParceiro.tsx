@@ -516,7 +516,7 @@ const DashboardParceiro = () => {
                                                 >
                                                     {imagePreview || newDiscount.imagem_url ? (
                                                         <div className="absolute inset-0 group">
-                                                            <img src={imagePreview || newDiscount.imagem_url || ''} alt="Preview" className="w-full h-full object-cover" />
+                                                            <img loading="lazy" src={imagePreview || newDiscount.imagem_url || ''} alt="Preview" className="w-full h-full object-cover" />
                                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                                 <p className="text-white font-bold text-sm">Trocar Imagem</p>
                                                             </div>
@@ -658,7 +658,7 @@ const DashboardParceiro = () => {
                                                 </div>
                                                 <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-md mb-6 border border-accent/10 overflow-hidden">
                                                     {discount.imagem_url ? (
-                                                        <img src={discount.imagem_url} alt="" className="w-full h-full object-cover" />
+                                                        <img loading="lazy" src={discount.imagem_url} alt="" className="w-full h-full object-cover" />
                                                     ) : (
                                                         discount.ativo ? <Zap className="w-7 h-7 text-accent" /> : <XCircle className="w-7 h-7 text-muted-foreground" />
                                                     )}

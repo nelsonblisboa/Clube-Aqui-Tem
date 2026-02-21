@@ -218,7 +218,7 @@ const LeadCapture = () => {
       <header className="py-4 px-4 relative z-10">
         <div className="container mx-auto flex justify-center">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Clube Aqui Tem" className="h-12 w-auto" />
+            <img loading="lazy" src={logo} alt="Clube Aqui Tem" className="h-12 w-auto" />
             <span className="font-brand text-2xl">
               <span className="text-primary font-bold">Clube</span>
               <span className="text-accent font-extrabold"> Aqui Tem</span>
@@ -388,7 +388,7 @@ const LeadCapture = () => {
                   exit={{ opacity: 0, x: -20 }}
                   className="flex gap-4 items-center"
                 >
-                  <img
+                  <img loading="lazy"
                     src={happyCustomers[currentTestimonial].src}
                     alt={happyCustomers[currentTestimonial].name}
                     className="w-20 h-20 rounded-full object-cover border-2 border-primary"

@@ -10,7 +10,7 @@ const Footer = () => {
           {/* Logo e Descrição */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <img src={logo} alt="Clube Aqui Tem" className="w-12 h-12 object-contain" />
+              <img loading="lazy" src={logo} alt="Clube Aqui Tem" className="w-12 h-12 object-contain" />
               <div className="flex flex-col leading-tight">
                 <span className="text-xl font-brand font-extrabold text-primary-foreground tracking-tight">Clube</span>
                 <span className="text-lg font-brand font-bold text-accent -mt-1">Aqui Tem</span>

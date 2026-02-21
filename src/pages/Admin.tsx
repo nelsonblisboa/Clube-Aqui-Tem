@@ -1621,7 +1621,7 @@ const Admin = () => {
                           <Card key={partner.id} className="border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-white hover:scale-[1.02] transition-all h-full flex flex-col">
                             <div className="bg-muted/30 p-8 flex justify-center border-b">
                               {partner.logo_url ? (
-                                <img src={partner.logo_url} alt="" className="h-16 w-32 object-contain" />
+                                <img loading="lazy" src={partner.logo_url} alt="" className="h-16 w-32 object-contain" />
                               ) : (
                                 <div className="h-16 w-32 bg-white rounded-2xl flex items-center justify-center border border-dashed text-muted-foreground/30">
                                   <ImageIcon size={32} />
@@ -2162,7 +2162,7 @@ const Admin = () => {
                 <div className="relative z-10 flex items-center gap-6">
                   <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center p-4 shadow-xl">
                     {selectedPartner.logo_url ? (
-                      <img src={selectedPartner.logo_url} alt="" className="w-full h-full object-contain" />
+                      <img loading="lazy" src={selectedPartner.logo_url} alt="" className="w-full h-full object-contain" />
                     ) : (
                       <Store className="text-primary w-10 h-10" />
                     )}

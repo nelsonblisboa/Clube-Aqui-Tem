@@ -34,7 +34,7 @@ const Header = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-            <img src={logo} alt="Clube Aqui Tem" className="w-11 h-11 object-contain" />
+            <img loading="lazy" src={logo} alt="Clube Aqui Tem" className="w-11 h-11 object-contain" />
             <div className="flex flex-col leading-tight">
               <span className="text-xl font-brand font-extrabold text-primary tracking-tight">Clube</span>
               <span className="text-lg font-brand font-bold text-accent -mt-1">Aqui Tem</span>

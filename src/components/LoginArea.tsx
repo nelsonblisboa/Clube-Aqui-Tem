@@ -54,7 +54,7 @@ const LoginArea = () => {
                 />
               </motion.div>
 
-              <img
+              <img loading="lazy"
                 src={membersImg}
                 alt="Associados Felizes"
                 className="relative rounded-2xl shadow-2xl w-full object-cover aspect-[4/3] lg:aspect-auto"

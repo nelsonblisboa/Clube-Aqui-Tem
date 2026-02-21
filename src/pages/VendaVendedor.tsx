@@ -297,7 +297,7 @@ const VendaVendedor = () => {
             {/* 2. HEADER MINIMALISTA (Logo + Vendedor) */}
             <header className="pt-14 pb-6 container mx-auto px-4 flex flex-col md:flex-row justify-between items-center relative z-40 gap-4">
                 <div className="flex items-center gap-3">
-                    <img src={logo} alt="Clube Aqui Tem" className="h-12 md:h-16 w-auto drop-shadow-sm" />
+                    <img loading="lazy" src={logo} alt="Clube Aqui Tem" className="h-12 md:h-16 w-auto drop-shadow-sm" />
                     <div className="flex flex-col">
                         <span className="font-brand font-black text-xl md:text-2xl text-primary leading-none">Clube Aqui Tem</span>
                         <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Vantagens e Benefícios</span>
@@ -336,7 +336,7 @@ const VendaVendedor = () => {
                     transition={{ delay: 0.3 }}
                     className="relative w-full aspect-video md:aspect-[21/9] bg-white rounded-[2rem] shadow-2xl shadow-primary/10 overflow-hidden mb-10 border-4 border-white ring-1 ring-border"
                 >
-                    <img src={happyImg} alt="Economia e Felicidade" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
+                    <img loading="lazy" src={happyImg} alt="Economia e Felicidade" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
                     <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-8 text-white text-left">
                         <p className="font-brand font-black text-xl md:text-2xl drop-shadow-lg">
                             "A melhor decisão financeira que tomei este ano!"
@@ -355,8 +355,8 @@ const VendaVendedor = () => {
                     <ArrowDown className="ml-3 w-6 h-6 animate-bounce" />
                 </Button>
                 <div className="flex justify-center gap-6 mt-6 opacity-60 grayscale items-center">
-                    <img src={horizonLogo} className="h-6" alt="Horizon" />
-                    <img src={portoSeguroLogo} className="h-5" alt="Porto" />
+                    <img loading="lazy" src={horizonLogo} className="h-6" alt="Horizon" />
+                    <img loading="lazy" src={portoSeguroLogo} className="h-5" alt="Porto" />
                     <span className="text-xs font-bold text-muted-foreground">Garantia de Gigantes</span>
                 </div>
             </section>
@@ -626,7 +626,7 @@ const VendaVendedor = () => {
             {/* GARANTIA */}
             <section className="py-12 bg-slate-50 text-center border-t border-slate-200">
                 <div className="container px-4">
-                    <img src={logo} className="h-8 mx-auto grayscale opacity-30 mb-4" alt="Logo" />
+                    <img loading="lazy" src={logo} className="h-8 mx-auto grayscale opacity-30 mb-4" alt="Logo" />
                     <p className="text-sm text-slate-400">© 2024 Clube Aqui Tem. Todos os direitos reservados. <br />Política de Privacidade • Termos de Uso</p>
                 </div>
             </section>

@@ -56,7 +56,7 @@ const Hero = () => {
             <div className="absolute -inset-4 bg-gradient-to-br from-primary/20 via-transparent to-accent/20 rounded-3xl blur-2xl"></div>
             <div className="absolute -top-4 -right-4 w-20 h-20 bg-accent/20 rounded-full blur-xl"></div>
             <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-primary/20 rounded-full blur-xl"></div>
-            <img
+            <img loading="lazy"
               src={heroImage}
               alt="Pessoas felizes aproveitando descontos e benefícios"
               className="relative rounded-3xl shadow-2xl w-full h-auto object-cover border-4 border-background"

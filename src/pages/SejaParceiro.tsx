@@ -302,7 +302,7 @@ const SejaParceiro = () => {
                                         <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-muted rounded-2xl bg-muted/20 hover:bg-muted/40 transition-all group relative">
                                             {logoPreview ? (
                                                 <div className="relative">
-                                                    <img
+                                                    <img loading="lazy"
                                                         src={logoPreview}
                                                         alt="Preview"
                                                         className="w-40 h-40 object-contain rounded-2xl border-4 border-white bg-white shadow-xl"

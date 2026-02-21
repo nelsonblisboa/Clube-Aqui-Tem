@@ -275,7 +275,7 @@ const LandingPage = () => {
                 className="relative lg:ml-auto"
               >
                 <div className="relative z-10 rounded-[3rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border-4 border-white/5">
-                  <img src={heroImg} alt="Família Feliz Economizando" className="w-full h-auto object-cover scale-[1.02]" />
+                  <img loading="lazy" src={heroImg} alt="Família Feliz Economizando" className="w-full h-auto object-cover scale-[1.02]" />
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent"></div>
 
                   {/* Glass Card Overlay */}
@@ -317,7 +317,7 @@ const LandingPage = () => {
                     <div className="flex -space-x-3">
                       {[1, 2, 3].map(i => (
                         <div key={i} className={`w-10 h-10 rounded-full border-2 border-white bg-slate-${i + 1}00 flex items-center justify-center text-[10px] font-bold text-slate-400 overflow-hidden`}>
-                          <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" />
+                          <img loading="lazy" src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" />
                         </div>
                       ))}
                     </div>
@@ -448,8 +448,8 @@ const LandingPage = () => {
           <div className="container mx-auto px-4 relative z-10">
             <p className="text-center text-white/50 text-[10px] md:text-xs font-black uppercase tracking-[0.3em] mb-12">Benefícios Garantidos por Líderes de Mercado</p>
             <div className="flex flex-wrap items-center justify-center gap-8 md:gap-24">
-              <img src={horizonLogo} alt="Horizon" className="h-[40px] sm:h-[60px] md:h-[100px] lg:h-[120px] w-auto object-contain brightness-0 invert opacity-90 hover:opacity-100 transition-all duration-500" />
-              <img src={portoSeguroLogo} alt="Porto Seguro" className="h-[40px] sm:h-[60px] md:h-[100px] lg:h-[120px] w-auto object-contain brightness-0 invert opacity-90 hover:opacity-100 transition-all duration-500" />
+              <img loading="lazy" src={horizonLogo} alt="Horizon" className="h-[40px] sm:h-[60px] md:h-[100px] lg:h-[120px] w-auto object-contain brightness-0 invert opacity-90 hover:opacity-100 transition-all duration-500" />
+              <img loading="lazy" src={portoSeguroLogo} alt="Porto Seguro" className="h-[40px] sm:h-[60px] md:h-[100px] lg:h-[120px] w-auto object-contain brightness-0 invert opacity-90 hover:opacity-100 transition-all duration-500" />
               <div className="h-12 w-px bg-white/10 hidden lg:block"></div>
               <div className="flex flex-col items-center">
                 <span className="text-3xl md:text-4xl font-brand font-black text-white tracking-tight">10k+</span>
@@ -620,7 +620,7 @@ const LandingPage = () => {
           <div className="container mx-auto px-4">
             <div className="grid md:grid-cols-2 gap-16 items-center max-w-5xl mx-auto">
               <div>
-                <img src={logo} alt="Clube Aqui Tem" className="h-20 w-auto mb-8" />
+                <img loading="lazy" src={logo} alt="Clube Aqui Tem" className="h-20 w-auto mb-8" />
                 <h2 className="text-4xl font-brand font-bold text-primary mb-6">Por que confiar em nós?</h2>
                 <div className="space-y-6 text-muted-foreground leading-relaxed">
                   <p>O <strong>Clube Aqui Tem</strong> nasceu com uma missão clara: dar poder de compra real para as famílias brasileiras.</p>
@@ -661,8 +661,8 @@ const LandingPage = () => {
               Sim, Quero Minha Vaga de Membro!
             </Button>
             <div className="mt-12 flex flex-wrap items-center justify-center gap-8 md:gap-24">
-              <img src={horizonLogo} alt="Horizon" className="h-[40px] sm:h-[60px] md:h-[100px] lg:h-[120px] w-auto object-contain brightness-0 invert opacity-90 hover:opacity-100 transition-all duration-500" />
-              <img src={portoSeguroLogo} alt="Porto Seguro" className="h-[40px] sm:h-[60px] md:h-[100px] lg:h-[120px] w-auto object-contain brightness-0 invert opacity-90 hover:opacity-100 transition-all duration-500" />
+              <img loading="lazy" src={horizonLogo} alt="Horizon" className="h-[40px] sm:h-[60px] md:h-[100px] lg:h-[120px] w-auto object-contain brightness-0 invert opacity-90 hover:opacity-100 transition-all duration-500" />
+              <img loading="lazy" src={portoSeguroLogo} alt="Porto Seguro" className="h-[40px] sm:h-[60px] md:h-[100px] lg:h-[120px] w-auto object-contain brightness-0 invert opacity-90 hover:opacity-100 transition-all duration-500" />
             </div>
           </div>
         </section>
@@ -736,7 +736,7 @@ const LandingPage = () => {
               </div>
 
               <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-center gap-4 opacity-50 grayscale scale-90">
-                <img src={logo} alt="Logo" className="h-6 w-auto" />
+                <img loading="lazy" src={logo} alt="Logo" className="h-6 w-auto" />
                 <div className="h-4 w-px bg-slate-200"></div>
                 <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-2.5 h-2.5 fill-accent text-accent" />)}

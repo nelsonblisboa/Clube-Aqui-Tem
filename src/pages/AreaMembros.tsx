@@ -592,7 +592,7 @@ const AreaMembros = () => {
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-white/95 rounded-xl flex items-center justify-center shadow-lg">
-                        <img src={logo} alt="Logo" className="w-8 h-8 object-contain" />
+                        <img loading="lazy" src={logo} alt="Logo" className="w-8 h-8 object-contain" />
                       </div>
                       <div>
                         <h3 className="text-white font-brand font-black text-lg leading-none tracking-tight">Clube Aqui Tem</h3>
@@ -644,7 +644,7 @@ const AreaMembros = () => {
                       />
                       <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-accent shadow-lg bg-black/50 relative">
                         {subscriber?.photo_url ? (
-                          <img src={subscriber?.photo_url} alt="Foto" className="w-full h-full object-cover" />
+                          <img loading="lazy" src={subscriber?.photo_url} alt="Foto" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center text-white/50 gap-1">
                             <Camera size={20} />
@@ -813,7 +813,7 @@ const AreaMembros = () => {
                     <Card className="h-full border border-border shadow-sm hover:shadow-2xl transition-all duration-300 rounded-[2.5rem] overflow-hidden bg-white">
                       {discount.imagem_url ? (
                         <div className="h-48 w-full overflow-hidden relative">
-                          <img
+                          <img loading="lazy"
                             src={discount.imagem_url}
                             alt={discount.titulo}
                             className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
@@ -939,9 +939,9 @@ const AreaMembros = () => {
 
                       <div className="space-y-12 w-full">
                         <div className="flex flex-wrap justify-center items-center gap-12 opacity-90 group-hover:opacity-100 transition-opacity">
-                          <img src={horizonLogo} alt="Horizon" className="h-24 w-auto object-contain" />
+                          <img loading="lazy" src={horizonLogo} alt="Horizon" className="h-24 w-auto object-contain" />
                           <div className="hidden sm:block w-px h-20 bg-border" />
-                          <img src={portoSeguroLogo} alt="Porto Seguro" className="h-16 w-auto object-contain" />
+                          <img loading="lazy" src={portoSeguroLogo} alt="Porto Seguro" className="h-16 w-auto object-contain" />
                         </div>
                         <p className="text-sm text-muted-foreground leading-relaxed bg-[#F9FAFB] p-6 rounded-2xl border border-border/50">
                           Benefícios de <strong className="text-primary">Saúde e Seguro de Vida</strong> são garantidos pela <strong>Horizon Corretora</strong> em parceria com a <strong className="text-primary">Porto Seguro</strong>.
@@ -951,7 +951,7 @@ const AreaMembros = () => {
 
                     <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-full">
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10 lg:hidden"></div>
-                      <img
+                      <img loading="lazy"
                         src={happyFamily}
                         alt="Família feliz e segura"
                         className="absolute inset-0 w-full h-full object-cover object-top lg:rounded-r-[2.5rem]"
