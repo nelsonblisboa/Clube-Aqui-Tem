@@ -1134,11 +1134,11 @@ const Admin = () => {
 
                         const apiUrl = window.location.hostname === 'localhost'
                           ? 'http://localhost:3000/api/scrape-coupons'
-                          : '/api/scrape-coupons';
+                          : window.location.origin + '/api/scrape-coupons';
 
                         const statusUrl = window.location.hostname === 'localhost'
                           ? 'http://localhost:3000/api/scrape-status'
-                          : '/api/scrape-status';
+                          : window.location.origin + '/api/scrape-status';
 
                         toast({
                           title: "Atualização Iniciada",
