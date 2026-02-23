@@ -18,8 +18,14 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Configurar diretório estático correto (Umbler pode rodar na raiz ou em /public)
+import fs from 'fs';
+const staticDir = fs.existsSync(path.join(__dirname, 'index.html'))
+    ? __dirname
+    : path.join(__dirname, 'public');
+
 // Servir arquivos estáticos do React (quando em produção)
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(staticDir));
 
 // Multer setup for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -48,11 +54,14 @@ app.get('/api/scrape-status', (req, res) => {
 });
 
 // Qualquer outra rota devolve o index.html (SPA)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.get(/.*/, (req, res) => {
+    res.sendFile(path.join(staticDir, 'index.html'));
 });
 
 app.listen(PORT, () => {
+    try {
+        fs.writeFileSync(path.join(__dirname, 'server-is-running.log'), `Started at ${new Date().toISOString()} on port ${PORT}`);
+    } catch (e) { }
     console.log(`
     🚀 Servidor rodando em http://localhost:${PORT}
     
