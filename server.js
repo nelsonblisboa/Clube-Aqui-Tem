@@ -20,9 +20,11 @@ app.use(express.json());
 
 // Configurar diretório estático correto (Umbler pode rodar na raiz ou em /public)
 import fs from 'fs';
-const staticDir = fs.existsSync(path.join(__dirname, 'index.html'))
-    ? __dirname
-    : path.join(__dirname, 'public');
+const staticDir = fs.existsSync(path.join(__dirname, 'dist', 'index.html'))
+    ? path.join(__dirname, 'dist')
+    : fs.existsSync(path.join(__dirname, 'public', 'index.html'))
+        ? path.join(__dirname, 'public')
+        : __dirname;
 
 // Servir arquivos estáticos do React (quando em produção)
 app.use(express.static(staticDir));
