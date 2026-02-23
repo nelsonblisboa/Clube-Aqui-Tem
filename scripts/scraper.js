@@ -142,9 +142,8 @@ async function scrapeAll() {
     let browser;
     try {
         browser = await puppeteer.launch({
-            headless: "new",
-            executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled']
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled', '--disable-dev-shm-usage']
         });
     } catch (launchError) {
         console.error('❌ Erro crítico ao iniciar navegador:', launchError.message);
