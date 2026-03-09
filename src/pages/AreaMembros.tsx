@@ -41,6 +41,13 @@ import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import horizonLogo from "@/assets/horizon-logo.png";
 import portoSeguroLogo from "@/assets/porto-seguro-logo.png";
 import happyFamily from "@/assets/happy-family.png";
@@ -83,6 +90,11 @@ const AreaMembros = () => {
   const [loadingDiscounts, setLoadingDiscounts] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showFuneralModal, setShowFuneralModal] = useState(false);
+  const [showAccidentModal, setShowAccidentModal] = useState(false);
+  const [showTelemedicineModal, setShowTelemedicineModal] = useState(false);
+  const [showPharmacyModal, setShowPharmacyModal] = useState(false);
+  const [showBasketModal, setShowBasketModal] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -308,35 +320,40 @@ const AreaMembros = () => {
       title: "Assistência Funeral Individual",
       description: "Cobertura completa para você em caso de necessidade, garantindo tranquilidade para sua família.",
       color: "text-blue-600",
-      bgColor: "bg-blue-50"
+      bgColor: "bg-blue-50",
+      onClick: () => setShowFuneralModal(true)
     },
     {
       icon: Heart,
       title: "Assistência Acidente Pessoal",
       description: "Proteção financeira em caso de acidentes, com indenização garantida pela Porto Seguro.",
       color: "text-red-500",
-      bgColor: "bg-red-50"
+      bgColor: "bg-red-50",
+      onClick: () => setShowAccidentModal(true)
     },
     {
       icon: Phone,
       title: "Telemedicina 24h",
       description: "Consultas médicas por vídeo ou telefone, disponíveis 24 horas por dia, 7 dias por semana.",
       color: "text-green-600",
-      bgColor: "bg-green-50"
+      bgColor: "bg-green-50",
+      onClick: () => setShowTelemedicineModal(true)
     },
     {
       icon: Pill,
       title: "Descontos em Farmácias",
       description: "Economia garantida em medicamentos nas principais redes de farmácias do país.",
       color: "text-purple-600",
-      bgColor: "bg-purple-50"
+      bgColor: "bg-purple-50",
+      onClick: () => setShowPharmacyModal(true)
     },
     {
-      icon: Stethoscope,
-      title: "Descontos em Consultas Médicas",
-      description: "Consultas com especialistas a preços reduzidos em clínicas parceiras.",
+      icon: ShieldCheck,
+      title: "Auxílio Cesta Básica",
+      description: "Amparo e cuidado para sua família com suporte real e imediato em momentos difíceis.",
       color: "text-cyan-600",
-      bgColor: "bg-cyan-50"
+      bgColor: "bg-cyan-50",
+      onClick: () => setShowBasketModal(true)
     },
     {
       icon: Smartphone,
@@ -731,8 +748,12 @@ const AreaMembros = () => {
           {/* Quick Access Grid */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {benefits.map((benefit, index) => {
+              const isClickable = benefit.link || (benefit as any).onClick;
               const CardComponent = (
-                <Card className={`h-full border border-border bg-white/80 backdrop-blur-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-[2rem] overflow-hidden group ${benefit.link ? 'cursor-pointer ring-2 ring-transparent hover:ring-accent/50' : ''}`}>
+                <Card
+                  className={`h-full border border-border bg-white/80 backdrop-blur-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 rounded-[2rem] overflow-hidden group ${isClickable ? 'cursor-pointer ring-2 ring-transparent hover:ring-accent/50' : ''}`}
+                  onClick={(benefit as any).onClick}
+                >
                   <CardContent className="p-8 relative">
                     {(benefit as any).badge && (
                       <div className="absolute top-6 right-6 bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-widest shadow-sm animate-pulse">
@@ -748,6 +769,12 @@ const AreaMembros = () => {
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       {benefit.description}
                     </p>
+                    {isClickable && (
+                      <div className="mt-6 flex items-center gap-2 text-[10px] font-black text-primary/60 bg-primary/5 px-3 py-1.5 rounded-full w-fit uppercase tracking-widest group-hover:bg-accent group-hover:text-white transition-all duration-300">
+                        <Zap className="w-3 h-3 animate-pulse" />
+                        Clique para mais detalhes
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -966,6 +993,477 @@ const AreaMembros = () => {
       </main>
 
       <Footer />
+
+      <Dialog open={showFuneralModal} onOpenChange={setShowFuneralModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] p-0 border-none shadow-2xl">
+          <DialogHeader className="p-8 pb-4 bg-primary text-white">
+            <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 border border-white/20">
+              <Shield className="w-10 h-10 text-accent" />
+            </div>
+            <DialogTitle className="text-3xl font-brand font-bold text-white">Assistência Funeral Individual</DialogTitle>
+            <DialogDescription className="text-white/70 text-lg">
+              Passo a Passo: Como acionar a Assistência
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-8 space-y-8">
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-2xl">
+              <p className="text-blue-900 font-medium leading-relaxed">
+                🕊️ Sabemos que a perda de um ente querido é um momento delicado e de dor. Por isso, criamos este guia rápido para orientar sua família a utilizar a Assistência Funeral (com cobertura de até <strong>R$ 7.000,00</strong>) da forma mais tranquila possível.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-primary/20">1</div>
+                <div>
+                  <h4 className="font-bold text-primary text-lg mb-2">Passo 1: Entre em contato com a Central</h4>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Assim que ocorrer o falecimento, um familiar ou representante deve ligar imediatamente para a Central de Atendimento 24 horas da <strong>HORIZON CORRETORA DE SEGUROS</strong>.
+                  </p>
+                  <div className="mt-3 inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-xl font-bold border border-green-100">
+                    <Phone className="w-4 h-4" />
+                    0800 100 1701 (Ligação Gratuita)
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-primary/20">2</div>
+                <div>
+                  <h4 className="font-bold text-primary text-lg mb-2">Passo 2: Tenha as informações em mãos</h4>
+                  <p className="text-muted-foreground mb-3">No momento da ligação, o atendente solicitará alguns dados básicos para iniciar o processo:</p>
+                  <ul className="grid gap-2">
+                    {['Nome completo do Associado (segurado titular)', 'Número de CPF', 'Local onde ocorreu o óbito (hospital, residência, etc.)', 'Um telefone de contato do familiar responsável'].map((item, i) => (
+                      <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground bg-gray-50 p-2 rounded-lg">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-primary/20">3</div>
+                <div>
+                  <h4 className="font-bold text-primary text-lg mb-2">Passo 3: Prestação de Serviços</h4>
+                  <p className="text-muted-foreground leading-relaxed">
+                    A assistência aciona seus parceiros e se encarrega de organizar e pagar todos os trâmites do funeral, respeitando o limite de <strong>R$ 7.000,00</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-primary/20">4</div>
+                <div>
+                  <h4 className="font-bold text-primary text-lg mb-2">Passo 4: Deixe a organização conosco</h4>
+                  <p className="text-muted-foreground mb-4">A assistência cuidará de todos os detalhes burocráticos e práticos para a despedida. Os serviços garantidos incluem:</p>
+
+                  <div className="grid gap-3">
+                    {[
+                      { title: "Documentação", text: "Assessoria para liberação do corpo e registro do óbito em cartório." },
+                      { title: "Estrutura", text: "Urna/caixão, ornamentação com flores da época, paramentos, coroa de flores e livro de presença." },
+                      { title: "Cerimônia", text: "Locação de sala velatória ou capela e o pagamento das taxas de sepultamento ou cremação." },
+                      { title: "Transporte", text: "Carro funerário e repatriação (retorno) do corpo caso ocorra durante uma viagem." },
+                      { title: "Jazigo", text: "Locação de um jazigo por 3 (três) anos, caso a família não possua um local definitivo." }
+                    ].map((service, i) => (
+                      <div key={i} className="bg-muted/30 p-4 rounded-xl">
+                        <h5 className="font-bold text-primary text-sm mb-1">{service.title}</h5>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{service.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-xl shadow-primary/20 mt-4"
+              onClick={() => setShowFuneralModal(false)}
+            >
+              Entendido
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAccidentModal} onOpenChange={setShowAccidentModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] p-0 border-none shadow-2xl">
+          <DialogHeader className="p-8 pb-4 bg-red-600 text-white">
+            <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 border border-white/20">
+              <Heart className="w-10 h-10 text-white" />
+            </div>
+            <DialogTitle className="text-3xl font-brand font-bold text-white">Seguro de Vida por Acidente</DialogTitle>
+            <DialogDescription className="text-white/70 text-lg">
+              Morte Acidental: O que é e como acionar?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-8 space-y-8">
+            <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-2xl">
+              <h4 className="font-bold text-red-900 mb-2">O que é essa cobertura?</h4>
+              <p className="text-red-800 text-sm leading-relaxed">
+                A cobertura de Morte Acidental é uma garantia de proteção financeira e amparo familiar. Ela assegura que, caso o colaborador (segurado) venha a falecer exclusivamente em consequência de um acidente pessoal coberto, os seus beneficiários indicados (ou herdeiros legais) receberão o pagamento de uma indenização no valor do Capital Segurado contratado. Esse valor é pago de uma só vez para ajudar na reestruturação e estabilidade financeira da família.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-red-600/20">1</div>
+                <div>
+                  <h4 className="font-bold text-primary text-lg mb-2">Passo 1: Preencher o Aviso de Sinistro</h4>
+                  <p className="text-muted-foreground leading-relaxed">
+                    É necessário preencher e assinar o formulário oficial chamado **"Aviso de Sinistro"** da Porto Seguro, informando a data, local, hora e a causa do evento.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-red-600/20">2</div>
+                <div>
+                  <h4 className="font-bold text-primary text-lg mb-2">Passo 2: Documentação do Segurado</h4>
+                  <p className="text-muted-foreground mb-3">Para comprovar o acidente, a seguradora exigirá alguns documentos essenciais do titular falecido:</p>
+                  <div className="grid gap-2">
+                    {[
+                      'Certidão de Óbito (cópia autenticada)',
+                      'Cópias simples do RG, CPF e comprovante de endereço',
+                      'Boletim de Ocorrência Policial (B.O.) e Laudo do IML (necroscópico)',
+                      'Laudo do primeiro atendimento médico hospitalar',
+                      'Em caso de acidente de trânsito (motorista), cópia da CNH',
+                      'Em caso de acidente de trabalho, cópia da CAT',
+                      'Termo de Rescisão (para comprovar vínculo)'
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground bg-gray-50 p-2 rounded-lg">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-red-600/20">3</div>
+                <div>
+                  <h4 className="font-bold text-primary text-lg mb-2">Passo 3: Documentação dos Beneficiários</h4>
+                  <p className="text-muted-foreground mb-3">As pessoas que vão receber a indenização também precisam enviar:</p>
+                  <div className="grid gap-2">
+                    {[
+                      'Cópias simples do RG, CPF e comprovante de endereço',
+                      'Certidão de Casamento atualizada (se cônjuge)',
+                      'Autorização para Crédito em Conta'
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground bg-gray-50 p-2 rounded-lg">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-red-600/20">4</div>
+                <div>
+                  <h4 className="font-bold text-primary text-lg mb-2">Passo 4: Envio para a Seguradora</h4>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Com toda a documentação reunida e o formulário preenchido, basta encaminhar os arquivos à seguradora para análise final.
+                  </p>
+                  <div className="mt-4 p-4 bg-green-50 rounded-2xl border border-green-100">
+                    <p className="text-sm text-green-800 font-medium flex flex-wrap items-center gap-2">
+                      Para acionar a seguradora, entre em contato com a
+                      <strong className="text-green-900">HORIZON CORRETORA DE SEGUROS</strong> via WhatsApp:
+                    </p>
+                    <a
+                      href="https://wa.me/5521965443321"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-2 text-green-700 font-black hover:underline group"
+                    >
+                      <Phone className="w-4 h-4" />
+                      (21) 96544-3321
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className="w-full h-14 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-lg shadow-xl shadow-red-600/20 mt-4"
+              onClick={() => setShowAccidentModal(false)}
+            >
+              Entendido
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showTelemedicineModal} onOpenChange={setShowTelemedicineModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] p-0 border-none shadow-2xl">
+          <DialogHeader className="p-8 pb-4 bg-green-600 text-white">
+            <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 border border-white/20">
+              <Phone className="w-10 h-10 text-white" />
+            </div>
+            <DialogTitle className="text-3xl font-brand font-bold text-white">Telemedicina 24h</DialogTitle>
+            <DialogDescription className="text-white/70 text-lg">
+              Passo a Passo: Como utilizar a Teleconsulta / Orientação Médica
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-8 space-y-8">
+            <div className="bg-green-50 border-l-4 border-green-500 p-6 rounded-r-2xl">
+              <p className="text-green-900 font-medium leading-relaxed">
+                📱 Cuidar da saúde da sua equipe ficou muito mais fácil e acessível. Com o benefício de Teleconsulta - Orientação Médica, o colaborador tem acesso a profissionais de saúde à distância, no conforto de casa. É a opção ideal para tirar dúvidas, receber orientações sobre sintomas ou ter um atendimento primário rápido, sem precisar enfrentar filas em prontos-socorros.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-green-600/20">1</div>
+                <div className="flex-grow">
+                  <h4 className="font-bold text-primary text-lg mb-2">Passo 1: Verifique a indicação do serviço</h4>
+                  <p className="text-muted-foreground leading-relaxed">
+                    A orientação médica à distância é indicada para casos de baixa complexidade (como resfriados, alergias, pequenas dores, dúvidas sobre medicamentos, etc.).
+                  </p>
+                  <div className="mt-4 p-4 bg-orange-50 rounded-xl border border-orange-100 flex gap-3 max-w-lg">
+                    <Zap className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-orange-800 leading-relaxed">
+                      <strong>Atenção:</strong> Em caso de acidentes graves ou emergências médicas (como falta de ar intensa ou suspeita de infarto), dirija-se imediatamente ao pronto-socorro presencial mais próximo.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-green-600/20">2</div>
+                <div className="flex-grow">
+                  <h4 className="font-bold text-primary text-lg mb-2">Passo 2: Acesse os Canais de Atendimento</h4>
+                  <p className="text-muted-foreground mb-4">
+                    Para utilizar a Teleconsulta, o colaborador (segurado) deve realizar o cadastro de seus dados e CPF no portal oficial:
+                  </p>
+                  <Button
+                    variant="hero"
+                    className="w-full sm:w-auto h-12 px-8 bg-[#0055c4] hover:bg-[#0044a1] text-white shadow-lg shadow-[#0055c4]/20 rounded-xl"
+                    onClick={() => window.open('https://portoseguro.vidaclass.com.br/', '_blank')}
+                  >
+                    Acessar Portal Telemedicina
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-green-600/20">3</div>
+                <div className="flex-grow">
+                  <h4 className="font-bold text-primary text-lg mb-2">Passo 3: Fale com o médico</h4>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Após o cadastro inicial, você será direcionado para um profissional de saúde. O médico avaliará seus sintomas, passará as orientações necessárias e, caso preciso, poderá fornecer prescrições médicas (receitas) em formato digital.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-8 border-t border-border">
+              <div className="p-6 bg-primary/5 rounded-[1.5rem] border border-primary/10">
+                <p className="text-sm text-primary font-medium flex items-center gap-2 mb-3">
+                  Qualquer dúvida entre em contato com:
+                </p>
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                      <Phone className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest font-black text-primary/40 leading-none mb-1">HORIZON CORRETORA DE SEGUROS</p>
+                      <p className="text-primary font-bold">(21) 96544-3321</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-green-500 hover:bg-green-600 text-white font-bold h-10 rounded-xl px-4 gap-2"
+                    onClick={() => window.open('https://wa.me/5521965443321', '_blank')}
+                  >
+                    Chamar no Whats
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full h-14 rounded-2xl border-2 font-bold text-lg"
+              onClick={() => setShowTelemedicineModal(false)}
+            >
+              Concluir orientação
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPharmacyModal} onOpenChange={setShowPharmacyModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] p-0 border-none shadow-2xl">
+          <DialogHeader className="p-8 pb-4 bg-purple-600 text-white">
+            <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 border border-white/20">
+              <Pill className="w-10 h-10 text-white" />
+            </div>
+            <DialogTitle className="text-3xl font-brand font-bold text-white">Descontos em Farmácias</DialogTitle>
+            <DialogDescription className="text-white/70 text-lg">
+              Programa Sou Mais Saúde - Rede d1000
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-8 space-y-8">
+            <div className="bg-purple-50 border-l-4 border-purple-500 p-6 rounded-r-2xl">
+              <p className="text-purple-900 font-medium leading-relaxed">
+                💊 Como membro exclusivo, você tem acesso ao <strong>Programa Sou Mais Saúde</strong>, uma parceria incrível com a <strong>Rede d1000</strong> que garante descontos especiais para cuidar da sua saúde e qualidade de vida.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-bold text-primary text-lg mb-4 flex items-center gap-2">
+                  <Percent className="w-5 h-5 text-purple-600" />
+                  Quais são os descontos garantidos?
+                </h4>
+                <div className="grid gap-3">
+                  {[
+                    { label: "Medicamentos Genéricos", value: "40% de desconto" },
+                    { label: "Medicamentos de Marca e Similares", value: "15% de desconto" },
+                    { label: "Medicamentos OTC (isentos de prescrição)", value: "10% de desconto" }
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-purple-50/50 rounded-xl border border-purple-100">
+                      <span className="text-sm text-primary font-medium">{item.label}</span>
+                      <span className="text-lg font-black text-purple-600">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-primary text-lg mb-4 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-purple-600" />
+                  Onde posso utilizar?
+                </h4>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                  A Rede d1000 conta com mais de 220 lojas espalhadas pelos estados do **Rio de Janeiro, Distrito Federal e Mato Grosso**. Você pode aproveitar seus benefícios nas seguintes redes:
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {['Drogarias Tamoio', 'Drogasmil', 'Farmalife', 'Drogaria Rosário'].map((rede, i) => (
+                    <div key={i} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-border/50">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span className="text-xs font-bold text-primary">{rede}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
+                <h4 className="font-bold text-primary text-lg mb-3">Como garantir o meu desconto?</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  O processo é simples e rápido! Basta se dirigir ao balcão de atendimento da farmácia, realizar a sua **identificação imediata informando o seu CPF** e apresentar um documento de identificação com foto no ato da compra.
+                </p>
+                <div className="mt-4 p-3 bg-white rounded-xl border border-primary/10 text-xs text-primary/70 italic">
+                  * O desconto é aplicado de forma automática sobre o Preço Máximo ao Consumidor (PMC) dos medicamentos.
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className="w-full h-14 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-lg shadow-xl shadow-purple-600/20"
+              onClick={() => setShowPharmacyModal(false)}
+            >
+              Entendido
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBasketModal} onOpenChange={setShowBasketModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] p-0 border-none shadow-2xl">
+          <DialogHeader className="p-8 pb-4 bg-cyan-600 text-white">
+            <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 border border-white/20">
+              <ShieldCheck className="w-10 h-10 text-white" />
+            </div>
+            <DialogTitle className="text-3xl font-brand font-bold text-white">Auxílio Cesta Básica</DialogTitle>
+            <DialogDescription className="text-white/70 text-lg">
+              Amparo e Cuidado para a Família
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-8 space-y-8">
+            <div className="bg-cyan-50 border-l-4 border-cyan-500 p-6 rounded-r-2xl">
+              <p className="text-cyan-900 font-medium leading-relaxed">
+                🛒 Sabemos que a perda de um ente querido traz, além do luto, grandes preocupações com a estabilidade e o sustento do lar. Pensando em oferecer um suporte real e imediato nesse momento de transição, nosso seguro conta com a cobertura de **Auxílio Cesta Básica** em caso de morte do segurado principal.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-cyan-600 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-cyan-600/20">1</div>
+                <div>
+                  <h4 className="font-bold text-primary text-lg mb-2">Como funciona este benefício?</h4>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Trata-se de uma garantia financeira no valor total de <strong>R$ 4.800,00</strong>. Esse valor tem o objetivo de auxiliar a família na aquisição de alimentação básica e ajudar na reestruturação financeira da casa após a falta do colaborador.
+                  </p>
+                  <p className="mt-2 text-xs text-cyan-700 italic">
+                    * O pagamento da indenização pode ser realizado pela seguradora em parcela única ou em parcelas mensais.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-cyan-600 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-cyan-600/20">2</div>
+                <div>
+                  <h4 className="font-bold text-primary text-lg mb-2">Quem tem direito a receber?</h4>
+                  <p className="text-muted-foreground leading-relaxed">
+                    O valor é pago de forma integral e direta aos beneficiários formalmente indicados pelo colaborador. Caso não tenha feito uma indicação prévia, a indenização será paga aos seus herdeiros legais, conforme determina a legislação brasileira.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-cyan-600 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-cyan-600/20">3</div>
+                <div>
+                  <h4 className="font-bold text-primary text-lg mb-2">Como solicitar?</h4>
+                  <p className="text-muted-foreground mb-4">
+                    A liberação deste auxílio ocorre em conjunto com o acionamento da cobertura principal de Morte. A família ou o representante legal deve entrar em contato com a <strong>HORIZON CORRETORA DE SEGUROS</strong>:
+                  </p>
+
+                  <div className="p-4 bg-green-50 rounded-2xl border border-green-100 mb-4">
+                    <p className="text-xs text-green-800 font-bold uppercase tracking-wider mb-2">Atendimento via WhatsApp</p>
+                    <a
+                      href="https://wa.me/5521965443321"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-green-700 font-black hover:underline text-lg"
+                    >
+                      <Phone className="w-5 h-5" />
+                      (21) 96544-3321
+                    </a>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground font-medium">Documentação básica exigida:</p>
+                  <div className="mt-2 grid gap-2">
+                    {['Formulário de Aviso de Sinistro preenchido', 'Certidão de Óbito', 'Cópias do RG e CPF do segurado', 'Documentos dos beneficiários'].map((doc, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[11px] text-muted-foreground bg-gray-50 p-2 rounded-lg">
+                        <CheckCircle className="w-3 h-3 text-green-500" />
+                        {doc}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className="w-full h-14 rounded-2xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-lg shadow-xl shadow-cyan-600/20"
+              onClick={() => setShowBasketModal(false)}
+            >
+              Entendido
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

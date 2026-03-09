@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tag, Shield, Heart, Stethoscope, Pill, UserCheck } from "lucide-react";
+import { Tag, Shield, Heart, Stethoscope, Pill, ShieldCheck } from "lucide-react";
 
 const benefits = [
   {
@@ -33,9 +33,9 @@ const benefits = [
     color: "text-brand-orange",
   },
   {
-    icon: UserCheck,
-    title: "Consultas Médicas",
-    description: "Descontos em consultas com especialistas",
+    icon: ShieldCheck,
+    title: "Auxílio Cesta Básica",
+    description: "Amparo e cuidado para sua família com suporte real e imediato",
     color: "text-primary",
   },
 ];
@@ -47,7 +47,7 @@ const Benefits = () => {
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
       <div className="absolute top-1/4 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl"></div>
       <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
-      
+
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-12 animate-fade-in-up">
           <div className="accent-bar mx-auto mb-6"></div>
@@ -61,8 +61,8 @@ const Benefits = () => {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {benefits.map((benefit, index) => (
-            <Card 
-              key={index} 
+            <Card
+              key={index}
               className="bg-gradient-card shadow-card hover:shadow-card-hover transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fade-in-up border-border group"
               style={{ animationDelay: `${index * 0.1}s` }}
             >

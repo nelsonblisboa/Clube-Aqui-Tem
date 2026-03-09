@@ -57,58 +57,69 @@ async function deploy() {
 
         console.log("✅ Conectado!");
 
-        // Upload List
         const filesToUpload = [
+            { local: "bootstrap.js", remote: "bootstrap.js" },
+            { local: "bootstrap.js", remote: "app.js" }, // Passenger compatibility map
             { local: "server.js", remote: "server.js" },
             { local: "package.json", remote: "package.json" },
             { local: "package-lock.json", remote: "package-lock.json" },
-            // Note: .env is risky to upload automatically but often necessary. Let's include it.
             { local: ".env", remote: ".env" }
         ];
 
-        // Removido o login na pasta public (pois o Umbler deste cliente está com / como diretório de publicação)
-        console.log("📂 Operando no diretório raiz (/)");
-
-        // 1. Upload root files
-        for (const file of filesToUpload) {
-            console.log(`⬆️ Enviando ${file.local}...`);
-            await client.uploadFrom(path.join(__dirname, file.local), file.remote);
-        }
-
-        // 2. Limpar e enviar pasta scripts
+        // 1. Limpar pastas antigas
+        console.log("�️ Limpando pasta 'public' antiga no servidor (Frontend)...");
+        try { await client.removeDir("public"); } catch (err) { }
         console.log("🗑️ Limpando pasta 'scripts' antiga no servidor...");
-        try {
-            await client.removeDir("scripts");
-            console.log("✅ Pasta scripts antiga removida!");
-        } catch (err) {
-            console.log("⚠️ Pasta scripts não existia (isso é normal na primeira vez)");
-        }
+        try { await client.removeDir("scripts"); } catch (err) { }
+        try { await client.removeDir("dist"); } catch (err) { }
 
-        console.log("⬆️ Enviando pasta 'scripts' (Backend Scraper)...");
-        // Não usar ensureDir antes do uploadFromDir para evitar diretório aninhado (ex: /scripts/scripts/)
-        await client.uploadFromDir(path.join(__dirname, "scripts"), "scripts");
-        console.log("✅ Scripts enviados com sucesso!");
-
-        console.log("🗑️ Limpando pasta 'public' antiga no servidor (Frontend)...");
-        try {
-            await client.removeDir("public");
-            console.log("✅ Pasta antiga removida!");
-        } catch (err) {
-            console.log("⚠️ Pasta public não existia ou erro ao remover");
-        }
-
-        // Cleanup: remove old dist folder
-        try {
-            await client.removeDir("dist");
-        } catch (err) { }
-
+        // 2. Enviar frontend
         console.log("⬆️ Enviando pasta 'dist' local para 'public' (Frontend Build)...");
-        // O cliente envia direto do local 'dist' para o remoto 'public' estando na raiz
         await client.uploadFromDir(path.join(__dirname, "dist"), "public");
         console.log("✅ Frontend enviado com sucesso!");
 
+        // 3. Enviar root files
+        console.log("� Operando no diretório raiz e enviando arquivos de backend");
+        for (const file of filesToUpload) {
+            console.log(`⬆️ Enviando ${file.local}...`);
+            await client.uploadFrom(path.join(__dirname, file.local), file.remote);
+            try {
+                // garante que se a Umbler usou /public como raiz, o backend também inicie por lá
+                await client.uploadFrom(path.join(__dirname, file.local), `public/${file.remote}`);
+            } catch (e) { }
+        }
+
+        // 4. Enviar scripts do backend
+        console.log("🗑️ Limpando pasta 'server' antiga no servidor...");
+        try { await client.removeDir("server"); } catch (err) { }
+
+        console.log("⬆️ Enviando pasta 'scripts' (Backend Scraper)...");
+        await client.uploadFromDir(path.join(__dirname, "scripts"), "scripts");
+        try {
+            await client.uploadFromDir(path.join(__dirname, "scripts"), "public/scripts");
+        } catch (e) { }
+
+        console.log("⬆️ Enviando pasta 'server' (Controllers)...");
+        await client.uploadFromDir(path.join(__dirname, "server"), "server");
+        try {
+            await client.uploadFromDir(path.join(__dirname, "server"), "public/server");
+        } catch (e) { }
+
+        console.log("✅ Scripts enviados com sucesso!");
+
+        console.log("\n🔄 Reiniciando a aplicação Node.js na Umbler...");
+        try {
+            await client.ensureDir("tmp");
+            const fs = await import('fs');
+            fs.writeFileSync('restart.txt', new Date().getTime().toString());
+            await client.uploadFrom('restart.txt', 'tmp/restart.txt');
+            console.log("✅ Sinal de reinício (tmp/restart.txt) enviado!");
+        } catch (err) {
+            console.log("⚠️ Não foi possível enviar o sinal automático de reinício.");
+        }
+
         console.log("\n✨ Deploy de arquivos concluído com sucesso!");
-        console.log("👉 Agora acesse o painel da Umbler e reinicie a aplicação Node.js.");
+        console.log("🚀 Lembrete: Na Umbler, o primeiro carregamento baixa os pacotes via NPM Install automático que criamos. Aguarde 30s-1min.");
 
     } catch (err) {
         console.error("❌ Erro no FTP:", err);
