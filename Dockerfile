@@ -1,26 +1,28 @@
-FROM node:18-alpine
+# Build stage
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --include=dev
+RUN npm ci --include=dev
 
 COPY . .
 
-RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
+RUN npm run build
 
+# Production stage
 FROM node:18-alpine
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
-COPY --from=0 /app/dist ./dist
-COPY --from=0 /app/server ./server
-COPY --from=0 /app/scripts ./scripts
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server ./server
+COPY --from=builder /app/scripts ./scripts
 COPY server.js .
 COPY bootstrap.js .
 
