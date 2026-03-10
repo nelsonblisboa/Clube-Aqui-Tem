@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config();
 
 const FTP_CONFIG = {
-    host: "alderaan08.umbler.host",
+    host: "alderaan07.umbler.host",
     user: "clubeaquitem-com-br",
     port: 21,
     password: process.env.FTP_PASSWORD // Tenta ler do .env
@@ -52,7 +52,7 @@ async function deploy() {
             user: FTP_CONFIG.user,
             password: password,
             port: FTP_CONFIG.port,
-            secure: false // Umbler often uses plain FTP or explicit TLS. Defaulting to false for compatibility, standard FTP usually port 21. Use true if explicit TLS needed.
+            secure: true // Umbler often uses plain FTP or explicit TLS. Defaulting to false for compatibility, standard FTP usually port 21. Use true if explicit TLS needed.
         });
 
         console.log("✅ Conectado!");
