@@ -9,7 +9,7 @@
     "build": "vite build",
     "start": "node server.js",
     "server": "node server.js",
-    "deploy": "npm run build && git add . && git commit -m \"Atualização: Melhoria exibição status pagamento MP no Admin\" && git push origin main && node deploy-ftp.js"
+    "deploy": "npm run build && git add . && git commit -m \"Deploy: Atualização enviada para o Railway\" && git push origin main"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
