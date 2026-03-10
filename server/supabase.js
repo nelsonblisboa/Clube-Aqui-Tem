@@ -2,12 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
 // Prioritize Service Role Key for backend operations to bypass RLS
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
-if (!supabaseUrl || !supabaseKey) {
-    console.error('Missing Supabase URL or Key');
+if (supabaseUrl === 'https://placeholder.supabase.co') {
+    console.error('⚠️ Aviso: VITE_SUPABASE_URL não configurada. Defina no painel do Railway.');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey);

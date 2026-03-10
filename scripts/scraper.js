@@ -13,12 +13,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
+const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error("❌ Erro: Credenciais do Supabase não encontradas no .env");
-    process.exit(1);
+if (SUPABASE_URL === 'https://placeholder.supabase.co') {
+    console.error("⚠️ Aviso: Credenciais do Supabase ausentes no Railway. O scraper falhará.");
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
