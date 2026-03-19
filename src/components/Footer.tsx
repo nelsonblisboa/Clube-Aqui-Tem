@@ -6,9 +6,9 @@ const Footer = () => {
   return (
     <footer className="bg-primary text-primary-foreground py-12 notranslate" translate="no">
       <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-4 gap-8 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
           {/* Logo e Descrição */}
-          <div className="space-y-4">
+          <div className="space-y-4 md:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-3">
               <img loading="lazy" src={logo} alt="Clube Aqui Tem" className="w-12 h-12 object-contain" />
               <div className="flex flex-col leading-tight">
@@ -24,7 +24,7 @@ const Footer = () => {
 
           {/* Links Úteis */}
           <div>
-            <h3 className="font-semibold mb-4 text-lg">Links Úteis</h3>
+            <h3 className="font-semibold mb-4 text-lg text-accent">Links Úteis</h3>
             <ul className="space-y-2 text-sm text-primary-foreground/80">
               <li>
                 <a href="/#inicio" className="hover:text-accent transition-colors">
@@ -44,9 +44,9 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Institucional (Renomeado para evitar conflito com Legal/Juridico) */}
+          {/* Institucional */}
           <div>
-            <h3 className="font-semibold mb-4 text-lg">Institucional</h3>
+            <h3 className="font-semibold mb-4 text-lg text-accent">Institucional</h3>
             <ul className="space-y-2 text-sm text-primary-foreground/80">
               <li>
                 <Link to="/politica-de-privacidade" className="hover:text-accent transition-colors">
@@ -61,6 +61,33 @@ const Footer = () => {
               <li>
                 <Link to="/contato" className="hover:text-accent transition-colors">
                   <span className="notranslate" translate="no">Ajuda e Suporte</span>
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Acesso Restrito */}
+          <div>
+            <h3 className="font-semibold mb-4 text-lg text-accent">Acesso Restrito</h3>
+            <ul className="space-y-2 text-sm text-primary-foreground/80">
+              <li>
+                <Link to="/minha-conta" className="hover:text-accent transition-colors font-medium">
+                  <span className="notranslate" translate="no">Área de Membros</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/dashboard-parceiro" className="hover:text-accent transition-colors font-medium">
+                  <span className="notranslate" translate="no">Dashboard do Parceiro</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/dashboard-vendedor" className="hover:text-accent transition-colors font-medium">
+                  <span className="notranslate" translate="no">Dashboard do Vendedor</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/login" className="hover:text-accent transition-colors">
+                  <span className="notranslate" translate="no">Login Administrativo</span>
                 </Link>
               </li>
             </ul>
