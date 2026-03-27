@@ -27,14 +27,14 @@ const Footer = () => {
             <h3 className="font-semibold mb-4 text-lg text-accent">Links Úteis</h3>
             <ul className="space-y-2 text-sm text-primary-foreground/80">
               <li>
-                <a href="/#inicio" className="hover:text-accent transition-colors">
+                <Link to="/#inicio" className="hover:text-accent transition-colors">
                   <span className="notranslate" translate="no">Sobre Nós</span>
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/#como-funciona" className="hover:text-accent transition-colors">
+                <Link to="/#como-funciona" className="hover:text-accent transition-colors">
                   <span className="notranslate" translate="no">Como Funciona</span>
-                </a>
+                </Link>
               </li>
               <li>
                 <Link to="/seja-parceiro" className="hover:text-accent transition-colors">
