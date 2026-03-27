@@ -52,7 +52,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter
-          basename={import.meta.env.BASE_URL}
+          basename={window.location.hostname.includes('github.io') ? '/Clube-Aqui-Tem' : '/'}
           future={{
             v7_startTransition: true,
             v7_relativeSplatPath: true
