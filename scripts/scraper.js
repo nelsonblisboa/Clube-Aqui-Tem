@@ -17,7 +17,7 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://placeholder.supab
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
 if (SUPABASE_URL === 'https://placeholder.supabase.co') {
-    console.error("⚠️ Aviso: Credenciais do Supabase ausentes no Railway. O scraper falhará.");
+    console.error("⚠️ Aviso: Credenciais do Supabase ausentes na Umbler ou .env. O scraper falhará.");
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);

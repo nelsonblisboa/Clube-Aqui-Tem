@@ -7,7 +7,7 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://placeholder.supaba
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
 if (supabaseUrl === 'https://placeholder.supabase.co') {
-    console.error('⚠️ Aviso: VITE_SUPABASE_URL não configurada. Defina no painel do Railway.');
+    console.error('⚠️ Aviso: VITE_SUPABASE_URL não configurada. Defina no painel da Umbler ou .env.');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
